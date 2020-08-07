@@ -38,7 +38,7 @@ func (d *DocContract) CreateDoc(ctx contractapi.TransactionContextInterface, doc
 	}
 
 	newDocAsBytes, _ := json.Marshal(doc)
-	fmt.Printf("Document with %s id created\n", documentid)
+	fmt.Printf("%s: Document with %s id created\n", txid, documentid)
 	return txid, ctx.GetStub().PutState(documentid, newDocAsBytes)
 }
 
@@ -77,6 +77,7 @@ func (d *DocContract) SignDoc(ctx contractapi.TransactionContextInterface, docum
 	doc.Signature = append(doc.Signature, signature)
 
 	docAsBytes, _ = json.Marshal(doc)
+	fmt.Printf("%s: Document %s signed by %s", txid, documentid, signhash)
 	return txid, ctx.GetStub().PutState(documentid, docAsBytes)
 }
 
@@ -111,7 +112,7 @@ func (d *DocContract) SendDoc(ctx contractapi.TransactionContextInterface, shari
 
 	shareSDocAdBytes, _ := json.Marshal(sharedoc)
 
-	fmt.Printf("Document %s shared from %s to %s\n", documentid, sender, verifier)
+	fmt.Printf("%s: Document %s shared from %s to %s\n", txid, documentid, sender, verifier)
 	return txid, ctx.GetStub().PutState(sharingid, shareSDocAdBytes)
 }
 
@@ -156,7 +157,7 @@ func (d *DocContract) VerifyDoc(ctx contractapi.TransactionContextInterface, akc
 
 	docAsBytes, _ = json.Marshal(doc)
 
-	fmt.Printf("Document %s of verified by %s\n", documentid, akcessid)
+	fmt.Printf("%s: Document %s of verified by %s\n", txid, documentid, akcessid)
 	return txid, ctx.GetStub().PutState(documentid, docAsBytes)
 }
 
@@ -228,7 +229,6 @@ func (d *DocContract) GetSignature(ctx contractapi.TransactionContextInterface, 
 		}
 	 }`, signHash)
 
-	fmt.Println(queryString)
 	resultIterator, _ := ctx.GetStub().GetQueryResult(queryString)
 	defer resultIterator.Close()
 
@@ -240,7 +240,6 @@ func (d *DocContract) GetSignature(ctx contractapi.TransactionContextInterface, 
 		doc := new(Document)
 		_ = json.Unmarshal(queryResponse.Value, doc)
 		result = append(result, *doc)
-		fmt.Println(result)
 	}
 	return result, nil
 }

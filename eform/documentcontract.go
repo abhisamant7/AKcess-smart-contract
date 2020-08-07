@@ -38,7 +38,7 @@ func (d *EformContract) CreateEform(ctx contractapi.TransactionContextInterface,
 	}
 
 	newEformAsBytes, _ := json.Marshal(eform)
-	fmt.Printf("Eform with %s id created\n", eformid)
+	fmt.Printf("%s: Eform with %s id created\n", txid, eformid)
 	return txid, ctx.GetStub().PutState(eformid, newEformAsBytes)
 }
 
@@ -73,6 +73,7 @@ func (d *EformContract) SignEform(ctx contractapi.TransactionContextInterface, e
 	eform.Signature = append(eform.Signature, signature)
 
 	eformAsBytes, _ = json.Marshal(eform)
+	fmt.Printf("%s: Eform %s signed by %s\n", txid, eformid, akcessid)
 	return txid, ctx.GetStub().PutState(eformid, eformAsBytes)
 }
 
@@ -99,7 +100,7 @@ func (d *EformContract) SendEform(ctx contractapi.TransactionContextInterface, s
 
 	shareEformAsBytes, _ := json.Marshal(shareeform)
 
-	fmt.Printf("Eform %s shared from %s to %s\n", eformid, sender, verifier)
+	fmt.Printf("%s: Eform %s shared from %s to %s\n", txid, eformid, sender, verifier)
 	return txid, ctx.GetStub().PutState(sharingid, shareEformAsBytes)
 }
 
@@ -144,7 +145,7 @@ func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface,
 
 	eformAsBytes, _ = json.Marshal(eform)
 
-	fmt.Printf("Eform %s of verified by %s\n", eformid, akcessid)
+	fmt.Printf("%s: Eform %s of verified by %s\n", txid, eformid, akcessid)
 	return txid, ctx.GetStub().PutState(eformid, eformAsBytes)
 }
 
