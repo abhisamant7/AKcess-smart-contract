@@ -1,4 +1,4 @@
-module github.com/chaincodes/akcess
+module github.com/chaincodes/eform
 
 go 1.13
 

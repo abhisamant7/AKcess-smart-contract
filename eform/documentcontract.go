@@ -31,7 +31,7 @@ func (d *EformContract) CreateEform(ctx contractapi.TransactionContextInterface,
 		ObjectType:        "efomr",
 		EformID:           efomrid,
 		EformHash:         eformHash,
-		SignatureHash:     []string{},
+		Signature:         []Signature{},
 		AkcessID:          akcessid,
 		VerifiedBy:        map[string]time.Time{},
 		VerificationGrade: []string{},
@@ -43,9 +43,14 @@ func (d *EformContract) CreateEform(ctx contractapi.TransactionContextInterface,
 }
 
 // SignEform signs the eform
-func (d *EformContract) SignEform(ctx contractapi.TransactionContextInterface, efomrid string, signhash string, otpCode string, akcessid string) (string, error) {
+func (d *EformContract) SignEform(ctx contractapi.TransactionContextInterface, efomrid string, signhash string, signDate string, otpCode string, akcessid string) (string, error) {
 	eformAsBytes, err := ctx.GetStub().GetState(efomrid)
 	txid := ctx.GetStub().GetTxID()
+
+	signdate, err := time.Parse(time.RFC3339, signDate)
+	if err != nil {
+		panic(err)
+	}
 
 	if err != nil {
 		return txid, fmt.Errorf("Failed to read from world state. %s", err.Error())
@@ -57,11 +62,15 @@ func (d *EformContract) SignEform(ctx contractapi.TransactionContextInterface, e
 
 	var eform Eform
 	json.Unmarshal(eformAsBytes, &eform)
-	eform.OTP = otpCode
-	_, found := Find(eform.SignatureHash, signhash)
-	if !found {
-		eform.SignatureHash = append(eform.SignatureHash, signhash)
+
+	signature := Signature{
+		SignatureHash: signhash,
+		OTP:           otpCode,
+		AkcessID:      akcessid,
+		TimeStamp:     signdate,
 	}
+
+	eform.Signature = append(eform.Signature, signature)
 
 	eformAsBytes, _ = json.Marshal(eform)
 	return txid, ctx.GetStub().PutState(efomrid, eformAsBytes)

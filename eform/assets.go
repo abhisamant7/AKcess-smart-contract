@@ -7,11 +7,18 @@ type Eform struct {
 	ObjectType        string               `json:"docType"`
 	EformID           string               `json:"eformId"`
 	EformHash         []string             `json:"eformHash"`
-	SignatureHash     []string             `json:"signaturehash"`
+	Signature         []Signature          `json:"signature"`
 	AkcessID          string               `json:"akcessid"`
 	VerifiedBy        map[string]time.Time `json:"verifiedby"`
 	VerificationGrade []string             `json:"verificationGrade"`
-	OTP               string               `json:"otp"`
+}
+
+// Signature structure
+type Signature struct {
+	SignatureHash string    `json:"signatureHash"`
+	OTP           string    `json:"otp"`
+	AkcessID      string    `json:"akcessId"`
+	TimeStamp     time.Time `json:"timeStamp"`
 }
 
 // EformShare eform object for share eform
