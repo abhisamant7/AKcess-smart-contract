@@ -15,8 +15,8 @@ type EformContract struct {
 }
 
 // CreateEform creates eform
-func (d *EformContract) CreateEform(ctx contractapi.TransactionContextInterface, efomrid string, eformHash []string, akcessid string) (string, error) {
-	eformAsBytes, err := ctx.GetStub().GetState(efomrid)
+func (d *EformContract) CreateEform(ctx contractapi.TransactionContextInterface, eformid string, eformHash []string, akcessid string) (string, error) {
+	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	txid := ctx.GetStub().GetTxID()
 
 	if err != nil {
@@ -24,12 +24,12 @@ func (d *EformContract) CreateEform(ctx contractapi.TransactionContextInterface,
 	}
 
 	if eformAsBytes != nil {
-		return txid, fmt.Errorf("EformID with %s already exist", efomrid)
+		return txid, fmt.Errorf("EformID with %s already exist", eformid)
 	}
 
 	eform := Eform{
-		ObjectType:        "efomr",
-		EformID:           efomrid,
+		ObjectType:        "eform",
+		EformID:           eformid,
 		EformHash:         eformHash,
 		Signature:         []Signature{},
 		AkcessID:          akcessid,
@@ -38,13 +38,13 @@ func (d *EformContract) CreateEform(ctx contractapi.TransactionContextInterface,
 	}
 
 	newEformAsBytes, _ := json.Marshal(eform)
-	fmt.Printf("Eform with %s id created\n", efomrid)
-	return txid, ctx.GetStub().PutState(efomrid, newEformAsBytes)
+	fmt.Printf("Eform with %s id created\n", eformid)
+	return txid, ctx.GetStub().PutState(eformid, newEformAsBytes)
 }
 
 // SignEform signs the eform
-func (d *EformContract) SignEform(ctx contractapi.TransactionContextInterface, efomrid string, signhash string, signDate string, otpCode string, akcessid string) (string, error) {
-	eformAsBytes, err := ctx.GetStub().GetState(efomrid)
+func (d *EformContract) SignEform(ctx contractapi.TransactionContextInterface, eformid string, signhash string, signDate string, otpCode string, akcessid string) (string, error) {
+	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	txid := ctx.GetStub().GetTxID()
 
 	signdate, err := time.Parse(time.RFC3339, signDate)
@@ -57,7 +57,7 @@ func (d *EformContract) SignEform(ctx contractapi.TransactionContextInterface, e
 	}
 
 	if eformAsBytes == nil {
-		return txid, fmt.Errorf("efomr with efomrid %s doesn't exist", efomrid)
+		return txid, fmt.Errorf("eform with eformid %s doesn't exist", eformid)
 	}
 
 	var eform Eform
@@ -73,12 +73,12 @@ func (d *EformContract) SignEform(ctx contractapi.TransactionContextInterface, e
 	eform.Signature = append(eform.Signature, signature)
 
 	eformAsBytes, _ = json.Marshal(eform)
-	return txid, ctx.GetStub().PutState(efomrid, eformAsBytes)
+	return txid, ctx.GetStub().PutState(eformid, eformAsBytes)
 }
 
-// SendEform shares efomr from sender to verifier
-func (d *EformContract) SendEform(ctx contractapi.TransactionContextInterface, sharingid string, sender string, verifier string, efomrid string) (string, error) {
-	eformAsBytes, err := ctx.GetStub().GetState(efomrid)
+// SendEform shares eform from sender to verifier
+func (d *EformContract) SendEform(ctx contractapi.TransactionContextInterface, sharingid string, sender string, verifier string, eformid string) (string, error) {
+	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	txid := ctx.GetStub().GetTxID()
 
 	if err != nil {
@@ -86,7 +86,7 @@ func (d *EformContract) SendEform(ctx contractapi.TransactionContextInterface, s
 	}
 
 	if eformAsBytes == nil {
-		return txid, fmt.Errorf("Eform with efomrid %s doesn't exist", efomrid)
+		return txid, fmt.Errorf("Eform with eformid %s doesn't exist", eformid)
 	}
 
 	shareeform := EformShare{
@@ -94,18 +94,18 @@ func (d *EformContract) SendEform(ctx contractapi.TransactionContextInterface, s
 		SharingID:  sharingid,
 		Sender:     sender,
 		Verifier:   verifier,
-		EformID:    efomrid,
+		EformID:    eformid,
 	}
 
 	shareEformAsBytes, _ := json.Marshal(shareeform)
 
-	fmt.Printf("Eform %s shared from %s to %s\n", efomrid, sender, verifier)
+	fmt.Printf("Eform %s shared from %s to %s\n", eformid, sender, verifier)
 	return txid, ctx.GetStub().PutState(sharingid, shareEformAsBytes)
 }
 
 // VerifyEform verify the eform
-func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface, akcessid string, efomrid string, expiryDate string, verificationGrade string) (string, error) {
-	eformAsBytes, err := ctx.GetStub().GetState(efomrid)
+func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface, akcessid string, eformid string, expiryDate string, verificationGrade string) (string, error) {
+	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	txid := ctx.GetStub().GetTxID()
 
 	expirydate, err := time.Parse(time.RFC3339, expiryDate)
@@ -118,7 +118,7 @@ func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface,
 	}
 
 	if eformAsBytes == nil {
-		return txid, fmt.Errorf("efomr with efomrid %s doesn't exist", efomrid)
+		return txid, fmt.Errorf("eform with eformid %s doesn't exist", eformid)
 	}
 
 	attr, ok, err := cid.GetAttributeValue(ctx.GetStub(), "isVerifier")
@@ -144,13 +144,13 @@ func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface,
 
 	eformAsBytes, _ = json.Marshal(eform)
 
-	fmt.Printf("Eform %s of verified by %s\n", efomrid, akcessid)
-	return txid, ctx.GetStub().PutState(efomrid, eformAsBytes)
+	fmt.Printf("Eform %s of verified by %s\n", eformid, akcessid)
+	return txid, ctx.GetStub().PutState(eformid, eformAsBytes)
 }
 
-// GetTxForEform get efomr details for perticular transaction
-// func (d *EformContract) GetTxForEform(ctx contractapi.TransactionContextInterface, efomrid string, txid string) (*Eform, error) {
-// 	resultIterator, err := ctx.GetStub().GetHistoryForKey(efomrid)
+// GetTxForEform get eform details for perticular transaction
+// func (d *EformContract) GetTxForEform(ctx contractapi.TransactionContextInterface, eformid string, txid string) (*Eform, error) {
+// 	resultIterator, err := ctx.GetStub().GetHistoryForKey(eformid)
 // 	if err != nil {
 // 		return nil, err
 // 	}
@@ -167,7 +167,7 @@ func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface,
 // 		fmt.Println(queryResponse.TxId == txid)
 // 		if queryResponse.TxId == txid {
 // 			queryResult := Eform{
-// 				ObjectType:        "efomr",
+// 				ObjectType:        "eform",
 // 				EformID:        d.EformID,
 // 				EformHash:      d.EformHash,
 // 				SignatureHash:     d.SignatureHash,
@@ -178,18 +178,18 @@ func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface,
 // 			return &queryResult, nil
 // 		}
 // 	}
-// 	return nil, fmt.Errorf("there is not tx with %s for efomr %s", txid, efomrid)
+// 	return nil, fmt.Errorf("there is not tx with %s for eform %s", txid, eformid)
 // }
 
 // GetVerifiersOfEform get verifiers of perticular eform
-func (d *EformContract) GetVerifiersOfEform(ctx contractapi.TransactionContextInterface, efomrid string) ([]string, error) {
-	eformAsBytes, err := ctx.GetStub().GetState(efomrid)
+func (d *EformContract) GetVerifiersOfEform(ctx contractapi.TransactionContextInterface, eformid string) ([]string, error) {
+	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read from world state. %s", err.Error())
 	}
 
 	if eformAsBytes == nil {
-		return nil, fmt.Errorf("efomr with efomrid %s doesn't exist", efomrid)
+		return nil, fmt.Errorf("eform with eformid %s doesn't exist", eformid)
 	}
 
 	var eform Eform
@@ -201,4 +201,34 @@ func (d *EformContract) GetVerifiersOfEform(ctx contractapi.TransactionContextIn
 		i++
 	}
 	return verifiers, nil
+}
+
+// GetSignature get signature by signature hash
+func (d *EformContract) GetSignature(ctx contractapi.TransactionContextInterface, signHash string) ([]Eform, error) {
+	queryString := fmt.Sprintf(`{
+		"selector": {
+		   "docType": "eform",
+		   "signature": {
+			  "$elemMatch": {
+				 "signatureHash": "%s"
+			  }
+		   }
+		}
+	 }`, signHash)
+
+	fmt.Println(queryString)
+	resultIterator, _ := ctx.GetStub().GetQueryResult(queryString)
+	defer resultIterator.Close()
+
+	result := []Eform{}
+
+	for resultIterator.HasNext() {
+		queryResponse, _ := resultIterator.Next()
+
+		eform := new(Eform)
+		_ = json.Unmarshal(queryResponse.Value, eform)
+		result = append(result, *eform)
+		fmt.Println(result)
+	}
+	return result, nil
 }

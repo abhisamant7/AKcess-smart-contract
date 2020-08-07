@@ -214,3 +214,33 @@ func (d *DocContract) GetVerifiersOfDoc(ctx contractapi.TransactionContextInterf
 	}
 	return verifiers, nil
 }
+
+// GetSignature get signature by signature hash
+func (d *DocContract) GetSignature(ctx contractapi.TransactionContextInterface, signHash string) ([]Document, error) {
+	queryString := fmt.Sprintf(`{
+		"selector": {
+		   "docType": "document",
+		   "signature": {
+			  "$elemMatch": {
+				 "signatureHash": "%s"
+			  }
+		   }
+		}
+	 }`, signHash)
+
+	fmt.Println(queryString)
+	resultIterator, _ := ctx.GetStub().GetQueryResult(queryString)
+	defer resultIterator.Close()
+
+	result := []Document{}
+
+	for resultIterator.HasNext() {
+		queryResponse, _ := resultIterator.Next()
+
+		doc := new(Document)
+		_ = json.Unmarshal(queryResponse.Value, doc)
+		result = append(result, *doc)
+		fmt.Println(result)
+	}
+	return result, nil
+}
