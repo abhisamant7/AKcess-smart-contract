@@ -30,11 +30,18 @@ type Document struct {
 	ObjectType        string               `json:"docType"`
 	DocumentID        string               `json:"documentid"`
 	DocumentHash      []string             `json:"documenthash"`
-	SignatureHash     []string             `json:"signaturehash"`
+	Signature         []Signature          `json:"signature"`
 	AkcessID          string               `json:"akcessid"`
 	VerifiedBy        map[string]time.Time `json:"verifiedby"`
 	VerificationGrade []string             `json:"verificationGrade"`
-	OTP               string               `json:"otp"`
+}
+
+// Signature structure
+type Signature struct {
+	SignatureHash string    `json:"signatureHash"`
+	OTP           string    `json:"otp"`
+	AkcessID      string    `json:"akcessId"`
+	TimeStamp     time.Time `json:"timeStamp"`
 }
 
 // DocumentShare document object for share doc

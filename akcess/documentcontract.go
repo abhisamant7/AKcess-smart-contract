@@ -31,7 +31,7 @@ func (d *DocContract) CreateDoc(ctx contractapi.TransactionContextInterface, doc
 		ObjectType:        "document",
 		DocumentID:        documentid,
 		DocumentHash:      documenthash,
-		SignatureHash:     []string{},
+		Signature:         []Signature{},
 		AkcessID:          akcessid,
 		VerifiedBy:        map[string]time.Time{},
 		VerificationGrade: []string{},
@@ -43,10 +43,15 @@ func (d *DocContract) CreateDoc(ctx contractapi.TransactionContextInterface, doc
 }
 
 // SignDoc signs doc with signature Hash
-func (d *DocContract) SignDoc(ctx contractapi.TransactionContextInterface, documentid string, signhash string, otpCode string, akcessid string) (string, error) {
+func (d *DocContract) SignDoc(ctx contractapi.TransactionContextInterface, documentid string, signhash string, signDate string, otpCode string, akcessid string) (string, error) {
 	docAsBytes, err := ctx.GetStub().GetState(documentid)
 	userAsBytes, err := ctx.GetStub().GetState(akcessid)
 	txid := ctx.GetStub().GetTxID()
+
+	signdate, err := time.Parse(time.RFC3339, signDate)
+	if err != nil {
+		panic(err)
+	}
 
 	if err != nil {
 		return txid, fmt.Errorf("Failed to read from world state. %s", err.Error())
@@ -61,11 +66,15 @@ func (d *DocContract) SignDoc(ctx contractapi.TransactionContextInterface, docum
 	}
 	var doc Document
 	json.Unmarshal(docAsBytes, &doc)
-	doc.OTP = otpCode
-	_, found := Find(doc.SignatureHash, signhash)
-	if !found {
-		doc.SignatureHash = append(doc.SignatureHash, signhash)
+
+	signature := Signature{
+		SignatureHash: signhash,
+		OTP:           otpCode,
+		AkcessID:      akcessid,
+		TimeStamp:     signdate,
 	}
+
+	doc.Signature = append(doc.Signature, signature)
 
 	docAsBytes, _ = json.Marshal(doc)
 	return txid, ctx.GetStub().PutState(documentid, docAsBytes)
