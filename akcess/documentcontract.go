@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hyperledger/fabric-chaincode-go/pkg/cid"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
@@ -16,25 +15,24 @@ type DocContract struct {
 
 // CreateDoc creates doc
 func (d *DocContract) CreateDoc(ctx contractapi.TransactionContextInterface, documentid string, documenthash []string, akcessid string) (string, error) {
+	// akcessid := ctx.GetClientIdentity().GetID()
 	docAsBytes, err := ctx.GetStub().GetState(documentid)
 	txid := ctx.GetStub().GetTxID()
 
 	if err != nil {
 		return txid, fmt.Errorf("Failed to read from world state. %s", err.Error())
 	}
-
 	if docAsBytes != nil {
 		return txid, fmt.Errorf("DocumentID with %s already exist", documentid)
 	}
 
 	doc := Document{
-		ObjectType:        "document",
-		DocumentID:        documentid,
-		DocumentHash:      documenthash,
-		Signature:         []Signature{},
-		AkcessID:          akcessid,
-		VerifiedBy:        map[string]time.Time{},
-		VerificationGrade: []string{},
+		ObjectType:    "document",
+		DocumentID:    documentid,
+		DocumentHash:  documenthash,
+		Signature:     []Signature{},
+		AkcessID:      akcessid,
+		Verifications: []Verification{},
 	}
 
 	newDocAsBytes, _ := json.Marshal(doc)
@@ -44,6 +42,7 @@ func (d *DocContract) CreateDoc(ctx contractapi.TransactionContextInterface, doc
 
 // SignDoc signs doc with signature Hash
 func (d *DocContract) SignDoc(ctx contractapi.TransactionContextInterface, documentid string, signhash string, signDate string, otpCode string, akcessid string) (string, error) {
+	// akcessid := ctx.GetClientIdentity().GetID()
 	docAsBytes, err := ctx.GetStub().GetState(documentid)
 	userAsBytes, err := ctx.GetStub().GetState(akcessid)
 	txid := ctx.GetStub().GetTxID()
@@ -56,14 +55,13 @@ func (d *DocContract) SignDoc(ctx contractapi.TransactionContextInterface, docum
 	if err != nil {
 		return txid, fmt.Errorf("Failed to read from world state. %s", err.Error())
 	}
-
 	if docAsBytes == nil {
 		return txid, fmt.Errorf("document with documentid %s doesn't exist", documentid)
 	}
-
 	if userAsBytes == nil {
 		return txid, fmt.Errorf("AKcessId %s doesn't exist", akcessid)
 	}
+
 	var doc Document
 	json.Unmarshal(docAsBytes, &doc)
 
@@ -75,14 +73,14 @@ func (d *DocContract) SignDoc(ctx contractapi.TransactionContextInterface, docum
 	}
 
 	doc.Signature = append(doc.Signature, signature)
-
 	docAsBytes, _ = json.Marshal(doc)
-	fmt.Printf("%s: Document %s signed by %s", txid, documentid, signhash)
+	fmt.Printf("%s: Document %s signed by %s\n", txid, documentid, signhash)
 	return txid, ctx.GetStub().PutState(documentid, docAsBytes)
 }
 
 // SendDoc shares document from sender to verifier
 func (d *DocContract) SendDoc(ctx contractapi.TransactionContextInterface, sharingid string, sender string, verifier string, documentid string) (string, error) {
+	// sender := ctx.GetClientIdentity().GetID()
 	senderAsBytes, err := ctx.GetStub().GetState(sender)
 	verifierAsBytes, err := ctx.GetStub().GetState(verifier)
 	docAsBytes, err := ctx.GetStub().GetState(documentid)
@@ -118,6 +116,7 @@ func (d *DocContract) SendDoc(ctx contractapi.TransactionContextInterface, shari
 
 // VerifyDoc verify the doc
 func (d *DocContract) VerifyDoc(ctx contractapi.TransactionContextInterface, akcessid string, documentid string, expiryDate string, verificationGrade string) (string, error) {
+	// akcessid := ctx.GetClientIdentity().GetID()
 	docAsBytes, err := ctx.GetStub().GetState(documentid)
 	txid := ctx.GetStub().GetTxID()
 
@@ -134,25 +133,39 @@ func (d *DocContract) VerifyDoc(ctx contractapi.TransactionContextInterface, akc
 		return txid, fmt.Errorf("document with documentid %s doesn't exist", documentid)
 	}
 
-	attr, ok, err := cid.GetAttributeValue(ctx.GetStub(), "isVerifier")
+	verifierAsBytes, err := ctx.GetStub().GetState(akcessid)
 	if err != nil {
-		fmt.Println("An error getting attribue")
+		return txid, fmt.Errorf("Failed to read from world state. %s", err.Error())
 	}
-	if !ok {
-		fmt.Println("identity does not have this perticular attribute")
+	if verifierAsBytes == nil {
+		return txid, fmt.Errorf("AKcessID %s doesn't exist", akcessid)
 	}
-	if attr != "true" {
-		return txid, fmt.Errorf("User who is invoking transaction is not a verifier")
+	if !IsVerifier(ctx) {
+		return txid, fmt.Errorf("Person who is invoking a transaction is not a verifier")
 	}
+
+	var verifier Verifier
+	json.Unmarshal(verifierAsBytes, &verifier)
 
 	var doc Document
 	json.Unmarshal(docAsBytes, &doc)
 
-	doc.VerifiedBy[akcessid] = expirydate
+	verification := Verification{
+		VerifierObj: verifier,
+		ExpirtyDate: expirydate,
+	}
 
-	_, found := Find(doc.VerificationGrade, verificationGrade)
-	if !found {
-		doc.VerificationGrade = append(doc.VerificationGrade, verificationGrade)
+	verifierList := VerifiersList(doc.Verifications)
+	_, found := Find(verifierList, akcessid)
+	if found {
+		for i, v := range doc.Verifications {
+			if v.VerifierObj.AkcessID == akcessid {
+				doc.Verifications[i].ExpirtyDate = expirydate
+				break
+			}
+		}
+	} else {
+		doc.Verifications = append(doc.Verifications, verification)
 	}
 
 	docAsBytes, _ = json.Marshal(doc)
@@ -195,7 +208,7 @@ func (d *DocContract) VerifyDoc(ctx contractapi.TransactionContextInterface, akc
 // }
 
 // GetVerifiersOfDoc get verifiers of perticular doc
-func (d *DocContract) GetVerifiersOfDoc(ctx contractapi.TransactionContextInterface, documentid string) ([]string, error) {
+func (d *DocContract) GetVerifiersOfDoc(ctx contractapi.TransactionContextInterface, documentid string) ([]Verification, error) {
 	docAsBytes, err := ctx.GetStub().GetState(documentid)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read from world state. %s", err.Error())
@@ -207,13 +220,8 @@ func (d *DocContract) GetVerifiersOfDoc(ctx contractapi.TransactionContextInterf
 
 	var doc Document
 	json.Unmarshal(docAsBytes, &doc)
-	verifiers := make([]string, len(doc.VerifiedBy))
-	i := 0
-	for v := range doc.VerifiedBy {
-		verifiers[i] = v
-		i++
-	}
-	return verifiers, nil
+
+	return doc.Verifications, nil
 }
 
 // GetSignature get signature by signature hash

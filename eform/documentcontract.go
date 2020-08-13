@@ -3,10 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
-	"github.com/hyperledger/fabric-chaincode-go/pkg/cid"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
+	"github.com/hyperledger/fabric/common/util"
 )
 
 // EformContract contract for storing user in blockchain
@@ -16,25 +17,24 @@ type EformContract struct {
 
 // CreateEform creates eform
 func (d *EformContract) CreateEform(ctx contractapi.TransactionContextInterface, eformid string, eformHash []string, akcessid string) (string, error) {
+	// akcessid := ctx.GetClientIdentity().GetID()
 	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	txid := ctx.GetStub().GetTxID()
 
 	if err != nil {
 		return txid, fmt.Errorf("Failed to read from world state. %s", err.Error())
 	}
-
 	if eformAsBytes != nil {
 		return txid, fmt.Errorf("EformID with %s already exist", eformid)
 	}
 
 	eform := Eform{
-		ObjectType:        "eform",
-		EformID:           eformid,
-		EformHash:         eformHash,
-		Signature:         []Signature{},
-		AkcessID:          akcessid,
-		VerifiedBy:        map[string]time.Time{},
-		VerificationGrade: []string{},
+		ObjectType:    "eform",
+		EformID:       eformid,
+		EformHash:     eformHash,
+		Signature:     []Signature{},
+		AkcessID:      akcessid,
+		Verifications: []Verification{},
 	}
 
 	newEformAsBytes, _ := json.Marshal(eform)
@@ -44,18 +44,17 @@ func (d *EformContract) CreateEform(ctx contractapi.TransactionContextInterface,
 
 // SignEform signs the eform
 func (d *EformContract) SignEform(ctx contractapi.TransactionContextInterface, eformid string, signhash string, signDate string, otpCode string, akcessid string) (string, error) {
+	// akcessid := ctx.GetClientIdentity().GetID()
 	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	txid := ctx.GetStub().GetTxID()
-
 	signdate, err := time.Parse(time.RFC3339, signDate)
+
 	if err != nil {
 		panic(err)
 	}
-
 	if err != nil {
 		return txid, fmt.Errorf("Failed to read from world state. %s", err.Error())
 	}
-
 	if eformAsBytes == nil {
 		return txid, fmt.Errorf("eform with eformid %s doesn't exist", eformid)
 	}
@@ -79,13 +78,13 @@ func (d *EformContract) SignEform(ctx contractapi.TransactionContextInterface, e
 
 // SendEform shares eform from sender to verifier
 func (d *EformContract) SendEform(ctx contractapi.TransactionContextInterface, sharingid string, sender string, verifier string, eformid string) (string, error) {
+	// akcessid := ctx.GetClientIdentity().GetID()
 	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	txid := ctx.GetStub().GetTxID()
 
 	if err != nil {
 		return txid, fmt.Errorf("Failed to read from world state. %s", err.Error())
 	}
-
 	if eformAsBytes == nil {
 		return txid, fmt.Errorf("Eform with eformid %s doesn't exist", eformid)
 	}
@@ -106,6 +105,7 @@ func (d *EformContract) SendEform(ctx contractapi.TransactionContextInterface, s
 
 // VerifyEform verify the eform
 func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface, akcessid string, eformid string, expiryDate string, verificationGrade string) (string, error) {
+	// akcessid := ctx.GetClientIdentity().GetID()
 	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	txid := ctx.GetStub().GetTxID()
 
@@ -117,30 +117,42 @@ func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface,
 	if err != nil {
 		return txid, fmt.Errorf("Failed to read from world state. %s", err.Error())
 	}
-
 	if eformAsBytes == nil {
 		return txid, fmt.Errorf("eform with eformid %s doesn't exist", eformid)
 	}
+	if !IsVerifier(ctx) {
+		return txid, fmt.Errorf("Person who is invoking a transaction is not a verifier")
+	}
 
-	attr, ok, err := cid.GetAttributeValue(ctx.GetStub(), "isVerifier")
-	if err != nil {
-		fmt.Println("An error getting attribue")
+	invokeArgs := util.ToChaincodeArgs("GetVerifier", akcessid)
+	verifierAsBytes := ctx.GetStub().InvokeChaincode("akcess", invokeArgs, os.Getenv("GLOBALCHANNEL"))
+
+	if verifierAsBytes.Payload == nil {
+		return txid, fmt.Errorf("Verifier %s is not yet registered on global channel", akcessid)
 	}
-	if !ok {
-		fmt.Println("identity does not have this perticular attribute")
-	}
-	if attr != "true" {
-		return txid, fmt.Errorf("User who is invoking transaction is not a verifier")
-	}
+
+	var verifier Verifier
+	json.Unmarshal(verifierAsBytes.Payload, &verifier)
 
 	var eform Eform
 	json.Unmarshal(eformAsBytes, &eform)
 
-	eform.VerifiedBy[akcessid] = expirydate
+	verification := Verification{
+		VerifierObj: verifier,
+		ExpirtyDate: expirydate,
+	}
 
-	_, found := Find(eform.VerificationGrade, verificationGrade)
-	if !found {
-		eform.VerificationGrade = append(eform.VerificationGrade, verificationGrade)
+	verifierList := VerifiersList(eform.Verifications)
+	_, found := Find(verifierList, akcessid)
+	if found {
+		for i, v := range eform.Verifications {
+			if v.VerifierObj.AkcessID == akcessid {
+				eform.Verifications[i].ExpirtyDate = expirydate
+				break
+			}
+		}
+	} else {
+		eform.Verifications = append(eform.Verifications, verification)
 	}
 
 	eformAsBytes, _ = json.Marshal(eform)
@@ -183,7 +195,7 @@ func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface,
 // }
 
 // GetVerifiersOfEform get verifiers of perticular eform
-func (d *EformContract) GetVerifiersOfEform(ctx contractapi.TransactionContextInterface, eformid string) ([]string, error) {
+func (d *EformContract) GetVerifiersOfEform(ctx contractapi.TransactionContextInterface, eformid string) ([]Verification, error) {
 	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read from world state. %s", err.Error())
@@ -195,13 +207,8 @@ func (d *EformContract) GetVerifiersOfEform(ctx contractapi.TransactionContextIn
 
 	var eform Eform
 	json.Unmarshal(eformAsBytes, &eform)
-	verifiers := make([]string, len(eform.VerifiedBy))
-	i := 0
-	for v := range eform.VerifiedBy {
-		verifiers[i] = v
-		i++
-	}
-	return verifiers, nil
+
+	return eform.Verifications, nil
 }
 
 // GetSignature get signature by signature hash

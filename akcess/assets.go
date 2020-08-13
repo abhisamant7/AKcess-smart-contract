@@ -1,6 +1,12 @@
 package main
 
-import "time"
+import (
+	"fmt"
+	"strconv"
+	"time"
+
+	"github.com/hyperledger/fabric-contract-api-go/contractapi"
+)
 
 // User describes basic details of user
 type User struct {
@@ -19,21 +25,18 @@ type Verifier struct {
 
 // Verification schema
 type Verification struct {
-	VerifierAKcessID  string    `json:"verifierAKcessId"`
-	VerifierName      string    `json:"verifierName"`
-	ExpirtyDate       time.Time `json:"expiryDate"`
-	VerificationGrade string    `json:"verificationGrade"`
+	VerifierObj Verifier  `json:"veriier"`
+	ExpirtyDate time.Time `json:"expiryDate"`
 }
 
 // Document structure
 type Document struct {
-	ObjectType        string               `json:"docType"`
-	DocumentID        string               `json:"documentid"`
-	DocumentHash      []string             `json:"documenthash"`
-	Signature         []Signature          `json:"signature"`
-	AkcessID          string               `json:"akcessid"`
-	VerifiedBy        map[string]time.Time `json:"verifiedby"`
-	VerificationGrade []string             `json:"verificationGrade"`
+	ObjectType    string         `json:"docType"`
+	DocumentID    string         `json:"documentid"`
+	DocumentHash  []string       `json:"documenthash"`
+	Signature     []Signature    `json:"signature"`
+	AkcessID      string         `json:"akcessid"`
+	Verifications []Verification `json:"verifications"`
 }
 
 // Signature structure
@@ -67,7 +70,20 @@ func Find(slice []string, val string) (int, bool) {
 func VerifiersList(v []Verification) []string {
 	var list []string
 	for _, verification := range v {
-		list = append(list, verification.VerifierAKcessID)
+		list = append(list, verification.VerifierObj.AkcessID)
 	}
 	return list
+}
+
+// IsVerifier checks if user who is invoking transaction is verifier or not
+func IsVerifier(ctx contractapi.TransactionContextInterface) bool {
+	isVerifier, attr, err := ctx.GetClientIdentity().GetAttributeValue("isVerifier")
+	if err != nil {
+		fmt.Println("Error while getting attribute from verifier identity")
+	}
+	if attr == false {
+		fmt.Println("isVerifier attribute for this identity is not set")
+	}
+	isverifier, err := strconv.ParseBool(isVerifier)
+	return isverifier
 }

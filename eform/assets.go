@@ -1,16 +1,21 @@
 package main
 
-import "time"
+import (
+	"fmt"
+	"strconv"
+	"time"
+
+	"github.com/hyperledger/fabric-contract-api-go/contractapi"
+)
 
 // Eform structure
 type Eform struct {
-	ObjectType        string               `json:"docType"`
-	EformID           string               `json:"eformId"`
-	EformHash         []string             `json:"eformHash"`
-	Signature         []Signature          `json:"signature"`
-	AkcessID          string               `json:"akcessid"`
-	VerifiedBy        map[string]time.Time `json:"verifiedby"`
-	VerificationGrade []string             `json:"verificationGrade"`
+	ObjectType    string         `json:"docType"`
+	EformID       string         `json:"eformId"`
+	EformHash     []string       `json:"eformHash"`
+	Signature     []Signature    `json:"signature"`
+	AkcessID      string         `json:"akcessid"`
+	Verifications []Verification `json:"verifications"`
 }
 
 // Signature structure
@@ -30,6 +35,20 @@ type EformShare struct {
 	EformID    string `json:"eformId"`
 }
 
+// Verifier schema
+type Verifier struct {
+	ObjectType    string `json:"docType"`
+	AkcessID      string `json:"akcessid"`
+	VerifierName  string `json:"verifierName"`
+	VerifierGrade string `json:"verifierGrade"`
+}
+
+// Verification schema
+type Verification struct {
+	VerifierObj Verifier  `json:"veriier"`
+	ExpirtyDate time.Time `json:"expiryDate"`
+}
+
 // Find check if item already exists in slice
 func Find(slice []string, val string) (int, bool) {
 	for i, item := range slice {
@@ -38,4 +57,26 @@ func Find(slice []string, val string) (int, bool) {
 		}
 	}
 	return -1, false
+}
+
+// VerifiersList get list of verifiers
+func VerifiersList(v []Verification) []string {
+	var list []string
+	for _, verification := range v {
+		list = append(list, verification.VerifierObj.AkcessID)
+	}
+	return list
+}
+
+// IsVerifier checks if user who is invoking transaction is verifier or not
+func IsVerifier(ctx contractapi.TransactionContextInterface) bool {
+	isVerifier, attr, err := ctx.GetClientIdentity().GetAttributeValue("isVerifier")
+	if err != nil {
+		fmt.Println("Error while getting attribute from verifier identity")
+	}
+	if attr == false {
+		fmt.Println("isVerifier attribute for this identity is not set")
+	}
+	isverifier, err := strconv.ParseBool(isVerifier)
+	return isverifier
 }
