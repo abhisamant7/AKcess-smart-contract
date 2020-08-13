@@ -14,8 +14,8 @@ type UserContract struct {
 }
 
 // CreateUser adds a new user to the world state with given details
-func (u *UserContract) CreateUser(ctx contractapi.TransactionContextInterface, akcessid string) (string, error) {
-	// akcessid := ctx.GetClientIdentity().GetID()
+func (u *UserContract) CreateUser(ctx contractapi.TransactionContextInterface) (string, error) {
+	akcessid, _ := ctx.GetClientIdentity().GetID()
 	userAsBytes, err := ctx.GetStub().GetState(akcessid)
 	txID := ctx.GetStub().GetTxID()
 
@@ -39,8 +39,8 @@ func (u *UserContract) CreateUser(ctx contractapi.TransactionContextInterface, a
 }
 
 // CreateVerifier register new verifier in Blockchain
-func (u *UserContract) CreateVerifier(ctx contractapi.TransactionContextInterface, akcessid string, verifierName string, VerifierGrade string) (string, error) {
-	// akcessid := ctx.GetClientIdentity().GetID()
+func (u *UserContract) CreateVerifier(ctx contractapi.TransactionContextInterface, verifierName string, VerifierGrade string) (string, error) {
+	akcessid, _ := ctx.GetClientIdentity().GetID()
 	verifierAsBytes, err := ctx.GetStub().GetState(akcessid)
 	txID := ctx.GetStub().GetTxID()
 
@@ -65,8 +65,8 @@ func (u *UserContract) CreateVerifier(ctx contractapi.TransactionContextInterfac
 }
 
 // AddUserProfileVerification add verifcation transaction and field of users profiles is verfiied
-func (u *UserContract) AddUserProfileVerification(ctx contractapi.TransactionContextInterface, userAKcessID string, verifierAKcessID string, verifierName string, profileField string, expiryDate string, verificationGrade string) (string, error) {
-	// verifierAKcessID := ctx.GetClientIdentity().GetID()
+func (u *UserContract) AddUserProfileVerification(ctx contractapi.TransactionContextInterface, userAKcessID string, profileField string, expiryDate string) (string, error) {
+	verifierAKcessID, _ := ctx.GetClientIdentity().GetID()
 	txID := ctx.GetStub().GetTxID()
 	verifierAsBytes, err := ctx.GetStub().GetState(verifierAKcessID)
 	if err != nil {
@@ -76,9 +76,9 @@ func (u *UserContract) AddUserProfileVerification(ctx contractapi.TransactionCon
 		return txID, fmt.Errorf("AKcessID %s doesn't exist", verifierAKcessID)
 	}
 
-	if !IsVerifier(ctx) {
-		return txID, fmt.Errorf("Person who is invoking a transaction is not a verifier")
-	}
+	// if !IsVerifier(ctx) {
+	// 	return txID, fmt.Errorf("Person who is invoking a transaction is not a verifier")
+	// }
 
 	expirydate, err := time.Parse(time.RFC3339, expiryDate)
 	if err != nil {
@@ -126,7 +126,7 @@ func (u *UserContract) AddUserProfileVerification(ctx contractapi.TransactionCon
 }
 
 // GetVerifiersOfUserProfile get verifiers of perticular user field
-func (u *UserContract) GetVerifiersOfUserProfile(ctx contractapi.TransactionContextInterface, akcessid string, profileField string) ([]string, error) {
+func (u *UserContract) GetVerifiersOfUserProfile(ctx contractapi.TransactionContextInterface, akcessid string, profileField string) ([]Verification, error) {
 	userAsBytes, err := ctx.GetStub().GetState(akcessid)
 
 	if err != nil {
@@ -138,9 +138,9 @@ func (u *UserContract) GetVerifiersOfUserProfile(ctx contractapi.TransactionCont
 
 	var user User
 	json.Unmarshal(userAsBytes, &user)
-	verificationList := VerifiersList(user.Verifications[profileField])
+	// verificationList := VerifiersList(user.Verifications[profileField])
 
-	return verificationList, nil
+	return user.Verifications[profileField], nil
 }
 
 // GetVerifier get verifier
