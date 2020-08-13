@@ -75,10 +75,9 @@ func (u *UserContract) AddUserProfileVerification(ctx contractapi.TransactionCon
 	if verifierAsBytes == nil {
 		return txID, fmt.Errorf("AKcessID %s doesn't exist", verifierAKcessID)
 	}
-
-	// if !IsVerifier(ctx) {
-	// 	return txID, fmt.Errorf("Person who is invoking a transaction is not a verifier")
-	// }
+	if !IsVerifier(ctx) {
+		return txID, fmt.Errorf("Person who is invoking a transaction is not a verifier")
+	}
 
 	expirydate, err := time.Parse(time.RFC3339, expiryDate)
 	if err != nil {
@@ -138,7 +137,6 @@ func (u *UserContract) GetVerifiersOfUserProfile(ctx contractapi.TransactionCont
 
 	var user User
 	json.Unmarshal(userAsBytes, &user)
-	// verificationList := VerifiersList(user.Verifications[profileField])
 
 	return user.Verifications[profileField], nil
 }

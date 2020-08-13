@@ -140,9 +140,9 @@ func (d *DocContract) VerifyDoc(ctx contractapi.TransactionContextInterface, doc
 	if verifierAsBytes == nil {
 		return txid, fmt.Errorf("AKcessID %s doesn't exist", akcessid)
 	}
-	// if !IsVerifier(ctx) {
-	// 	return txid, fmt.Errorf("Person who is invoking a transaction is not a verifier")
-	// }
+	if !IsVerifier(ctx) {
+		return txid, fmt.Errorf("Person who is invoking a transaction is not a verifier")
+	}
 
 	var verifier Verifier
 	json.Unmarshal(verifierAsBytes, &verifier)

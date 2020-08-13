@@ -120,9 +120,9 @@ func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface,
 	if eformAsBytes == nil {
 		return txid, fmt.Errorf("eform with eformid %s doesn't exist", eformid)
 	}
-	// if !IsVerifier(ctx) {
-	// 	return txid, fmt.Errorf("Person who is invoking a transaction is not a verifier")
-	// }
+	if !IsVerifier(ctx) {
+		return txid, fmt.Errorf("Person who is invoking a transaction is not a verifier")
+	}
 
 	invokeArgs := util.ToChaincodeArgs("GetVerifier", akcessid)
 	verifierAsBytes := ctx.GetStub().InvokeChaincode("akcess", invokeArgs, os.Getenv("GLOBALCHANNEL"))
