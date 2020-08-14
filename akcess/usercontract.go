@@ -157,3 +157,33 @@ func (u *UserContract) GetVerifier(ctx contractapi.TransactionContextInterface, 
 
 	return &verifier, nil
 }
+
+// DeleteVerification deletes the verification from user profile
+func (u *UserContract) DeleteVerification(ctx contractapi.TransactionContextInterface, akcessid string, profileField string) (string, error) {
+	userAsBytes, err := ctx.GetStub().GetState(akcessid)
+	txID := ctx.GetStub().GetTxID()
+
+	if err != nil {
+		return txID, fmt.Errorf("Failed to read from world state. %s", err.Error())
+	}
+	if userAsBytes == nil {
+		return txID, fmt.Errorf("AKcessID %s doesn't exist", akcessid)
+	}
+
+	var user User
+	json.Unmarshal(userAsBytes, &user)
+
+	var index int
+	for i, j := range user.Verifications[profileField] {
+		if j.VerifierObj.AkcessID == akcessid {
+			index = i
+			break
+		}
+	}
+
+	user.Verifications[profileField] = Remove(user.Verifications[profileField], index)
+
+	newUserAsBytes, _ := json.Marshal(user)
+
+	return txID, ctx.GetStub().PutState(akcessid, newUserAsBytes)
+}

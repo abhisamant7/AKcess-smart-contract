@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
@@ -125,7 +124,7 @@ func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface,
 	}
 
 	invokeArgs := util.ToChaincodeArgs("GetVerifier", akcessid)
-	verifierAsBytes := ctx.GetStub().InvokeChaincode("akcess", invokeArgs, os.Getenv("GLOBALCHANNEL"))
+	verifierAsBytes := ctx.GetStub().InvokeChaincode("akcess", invokeArgs, "akcessglobal")
 
 	if verifierAsBytes.Payload == nil {
 		return txid, fmt.Errorf("Verifier %s is not yet registered on global channel", akcessid)

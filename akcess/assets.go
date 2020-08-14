@@ -18,7 +18,7 @@ type User struct {
 // Verifier schema
 type Verifier struct {
 	ObjectType    string `json:"docType"`
-	AkcessID      string `json:"akcessid"`
+	AkcessID      string `json:"akcessid"` // AKcessID of a verifier
 	VerifierName  string `json:"verifierName"`
 	VerifierGrade string `json:"verifierGrade"`
 }
@@ -26,7 +26,7 @@ type Verifier struct {
 // Verification schema
 type Verification struct {
 	VerifierObj Verifier  `json:"veriier"`
-	ExpirtyDate time.Time `json:"expiryDate"`
+	ExpirtyDate time.Time `json:"expiryDate"` // when verification will expire
 }
 
 // Document structure
@@ -35,7 +35,7 @@ type Document struct {
 	DocumentID    string         `json:"documentid"`
 	DocumentHash  []string       `json:"documenthash"`
 	Signature     []Signature    `json:"signature"`
-	AkcessID      string         `json:"akcessid"`
+	AkcessID      string         `json:"akcessid"` // AKcessID of user who owns the document
 	Verifications []Verification `json:"verifications"`
 }
 
@@ -43,8 +43,8 @@ type Document struct {
 type Signature struct {
 	SignatureHash string    `json:"signatureHash"`
 	OTP           string    `json:"otp"`
-	AkcessID      string    `json:"akcessId"`
-	TimeStamp     time.Time `json:"timeStamp"`
+	AkcessID      string    `json:"akcessId"`  // AKcessID of user who signs
+	TimeStamp     time.Time `json:"timeStamp"` // timestamp when signature is performed
 }
 
 // DocumentShare document object for share doc
@@ -86,4 +86,10 @@ func IsVerifier(ctx contractapi.TransactionContextInterface) bool {
 	}
 	isverifier, err := strconv.ParseBool(isVerifier)
 	return isverifier
+}
+
+// Remove deletes and element at peticular index from slice
+func Remove(s []Verification, i int) []Verification {
+	s[len(s)-1], s[i] = s[i], s[len(s)-1]
+	return s[:len(s)-1]
 }
