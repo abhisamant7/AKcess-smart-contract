@@ -15,8 +15,8 @@ type EformContract struct {
 }
 
 // CreateEform creates eform
-func (d *EformContract) CreateEform(ctx contractapi.TransactionContextInterface, eformid string, eformHash []string) (string, error) {
-	akcessid, _ := ctx.GetClientIdentity().GetID()
+func (d *EformContract) CreateEform(ctx contractapi.TransactionContextInterface, akcessid string, eformid string, eformHash []string) (string, error) {
+	// akcessid, _ := ctx.GetClientIdentity().GetID()
 	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	txid := ctx.GetStub().GetTxID()
 
@@ -42,8 +42,8 @@ func (d *EformContract) CreateEform(ctx contractapi.TransactionContextInterface,
 }
 
 // SignEform signs the eform
-func (d *EformContract) SignEform(ctx contractapi.TransactionContextInterface, eformid string, signhash string, signDate string, otpCode string) (string, error) {
-	akcessid, _ := ctx.GetClientIdentity().GetID()
+func (d *EformContract) SignEform(ctx contractapi.TransactionContextInterface, akcessid string, eformid string, signhash string, signDate string, otpCode string) (string, error) {
+	// akcessid, _ := ctx.GetClientIdentity().GetID()
 	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	txid := ctx.GetStub().GetTxID()
 	signdate, err := time.Parse(time.RFC3339, signDate)
@@ -76,8 +76,8 @@ func (d *EformContract) SignEform(ctx contractapi.TransactionContextInterface, e
 }
 
 // SendEform shares eform from sender to verifier
-func (d *EformContract) SendEform(ctx contractapi.TransactionContextInterface, sharingid string, verifier string, eformid string) (string, error) {
-	sender, _ := ctx.GetClientIdentity().GetID()
+func (d *EformContract) SendEform(ctx contractapi.TransactionContextInterface, sender string, sharingid string, verifier string, eformid string) (string, error) {
+	// sender, _ := ctx.GetClientIdentity().GetID()
 	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	txid := ctx.GetStub().GetTxID()
 
@@ -103,8 +103,8 @@ func (d *EformContract) SendEform(ctx contractapi.TransactionContextInterface, s
 }
 
 // VerifyEform verify the eform
-func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface, eformid string, expiryDate string, verificationGrade string) (string, error) {
-	akcessid, _ := ctx.GetClientIdentity().GetID()
+func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface, akcessid string, eformid string, expiryDate string, verificationGrade string) (string, error) {
+	// akcessid, _ := ctx.GetClientIdentity().GetID()
 	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	txid := ctx.GetStub().GetTxID()
 

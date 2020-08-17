@@ -14,8 +14,8 @@ type DocContract struct {
 }
 
 // CreateDoc creates doc
-func (d *DocContract) CreateDoc(ctx contractapi.TransactionContextInterface, documentid string, documenthash []string) (string, error) {
-	akcessid, _ := ctx.GetClientIdentity().GetID()
+func (d *DocContract) CreateDoc(ctx contractapi.TransactionContextInterface, akcessid string, documentid string, documenthash []string) (string, error) {
+	// akcessid, _ := ctx.GetClientIdentity().GetID()
 	docAsBytes, err := ctx.GetStub().GetState(documentid)
 	txid := ctx.GetStub().GetTxID()
 
@@ -41,8 +41,8 @@ func (d *DocContract) CreateDoc(ctx contractapi.TransactionContextInterface, doc
 }
 
 // SignDoc signs doc with signature Hash
-func (d *DocContract) SignDoc(ctx contractapi.TransactionContextInterface, documentid string, signhash string, signDate string, otpCode string) (string, error) {
-	akcessid, _ := ctx.GetClientIdentity().GetID()
+func (d *DocContract) SignDoc(ctx contractapi.TransactionContextInterface, akcessid string, documentid string, signhash string, signDate string, otpCode string) (string, error) {
+	// akcessid, _ := ctx.GetClientIdentity().GetID()
 	docAsBytes, err := ctx.GetStub().GetState(documentid)
 	userAsBytes, err := ctx.GetStub().GetState(akcessid)
 	txid := ctx.GetStub().GetTxID()
@@ -79,8 +79,8 @@ func (d *DocContract) SignDoc(ctx contractapi.TransactionContextInterface, docum
 }
 
 // SendDoc shares document from sender to verifier
-func (d *DocContract) SendDoc(ctx contractapi.TransactionContextInterface, sharingid string, verifier string, documentid string) (string, error) {
-	sender, _ := ctx.GetClientIdentity().GetID()
+func (d *DocContract) SendDoc(ctx contractapi.TransactionContextInterface, sender string, sharingid string, verifier string, documentid string) (string, error) {
+	// sender, _ := ctx.GetClientIdentity().GetID()
 	senderAsBytes, err := ctx.GetStub().GetState(sender)
 	verifierAsBytes, err := ctx.GetStub().GetState(verifier)
 	docAsBytes, err := ctx.GetStub().GetState(documentid)
@@ -115,8 +115,8 @@ func (d *DocContract) SendDoc(ctx contractapi.TransactionContextInterface, shari
 }
 
 // VerifyDoc verify the doc
-func (d *DocContract) VerifyDoc(ctx contractapi.TransactionContextInterface, documentid string, expiryDate string, verificationGrade string) (string, error) {
-	akcessid, _ := ctx.GetClientIdentity().GetID()
+func (d *DocContract) VerifyDoc(ctx contractapi.TransactionContextInterface, akcessid string, documentid string, expiryDate string, verificationGrade string) (string, error) {
+	// akcessid, _ := ctx.GetClientIdentity().GetID()
 	docAsBytes, err := ctx.GetStub().GetState(documentid)
 	txid := ctx.GetStub().GetTxID()
 
