@@ -74,7 +74,7 @@ func (d *DocContract) SignDoc(ctx contractapi.TransactionContextInterface, akces
 
 	doc.Signature = append(doc.Signature, signature)
 	docAsBytes, _ = json.Marshal(doc)
-	fmt.Printf("%s: Document %s signed by %s\n", txid, documentid, signhash)
+	fmt.Printf("%s: Document %s signed by %s\n", txid, documentid, akcessid)
 	return txid, ctx.GetStub().PutState(documentid, docAsBytes)
 }
 
@@ -115,7 +115,7 @@ func (d *DocContract) SendDoc(ctx contractapi.TransactionContextInterface, sende
 }
 
 // VerifyDoc verify the doc
-func (d *DocContract) VerifyDoc(ctx contractapi.TransactionContextInterface, akcessid string, documentid string, expiryDate string, verificationGrade string) (string, error) {
+func (d *DocContract) VerifyDoc(ctx contractapi.TransactionContextInterface, akcessid string, documentid string, expiryDate string) (string, error) {
 	// akcessid, _ := ctx.GetClientIdentity().GetID()
 	docAsBytes, err := ctx.GetStub().GetState(documentid)
 	txid := ctx.GetStub().GetTxID()
@@ -139,9 +139,6 @@ func (d *DocContract) VerifyDoc(ctx contractapi.TransactionContextInterface, akc
 	}
 	if verifierAsBytes == nil {
 		return txid, fmt.Errorf("AKcessID %s doesn't exist", akcessid)
-	}
-	if !IsVerifier(ctx) {
-		return txid, fmt.Errorf("Person who is invoking a transaction is not a verifier")
 	}
 
 	var verifier Verifier

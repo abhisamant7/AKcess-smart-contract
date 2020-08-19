@@ -103,7 +103,7 @@ func (d *EformContract) SendEform(ctx contractapi.TransactionContextInterface, s
 }
 
 // VerifyEform verify the eform
-func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface, akcessid string, eformid string, expiryDate string, verificationGrade string) (string, error) {
+func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface, akcessid string, eformid string, expiryDate string) (string, error) {
 	// akcessid, _ := ctx.GetClientIdentity().GetID()
 	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	txid := ctx.GetStub().GetTxID()
@@ -118,9 +118,6 @@ func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface,
 	}
 	if eformAsBytes == nil {
 		return txid, fmt.Errorf("eform with eformid %s doesn't exist", eformid)
-	}
-	if !IsVerifier(ctx) {
-		return txid, fmt.Errorf("Person who is invoking a transaction is not a verifier")
 	}
 
 	invokeArgs := util.ToChaincodeArgs("GetVerifier", akcessid)

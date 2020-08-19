@@ -14,7 +14,7 @@ type UserContract struct {
 }
 
 // CreateUser adds a new user to the world state with given details
-func (u *UserContract) CreateUser(akcessid string, ctx contractapi.TransactionContextInterface) (string, error) {
+func (u *UserContract) CreateUser(ctx contractapi.TransactionContextInterface, akcessid string) (string, error) {
 	// akcessid, _ := ctx.GetClientIdentity().GetID()
 	userAsBytes, err := ctx.GetStub().GetState(akcessid)
 	txID := ctx.GetStub().GetTxID()
@@ -74,9 +74,6 @@ func (u *UserContract) AddUserProfileVerification(ctx contractapi.TransactionCon
 	}
 	if verifierAsBytes == nil {
 		return txID, fmt.Errorf("AKcessID %s doesn't exist", verifierAKcessID)
-	}
-	if !IsVerifier(ctx) {
-		return txID, fmt.Errorf("Person who is invoking a transaction is not a verifier")
 	}
 
 	expirydate, err := time.Parse(time.RFC3339, expiryDate)
@@ -159,7 +156,7 @@ func (u *UserContract) GetVerifier(ctx contractapi.TransactionContextInterface, 
 }
 
 // DeleteVerification deletes the verification from user profile
-func (u *UserContract) DeleteVerification(ctx contractapi.TransactionContextInterface, akcessid string, profileField string) (string, error) {
+func (u *UserContract) DeleteVerification(ctx contractapi.TransactionContextInterface, akcessid string, profileField string, verifierAKcessid string) (string, error) {
 	userAsBytes, err := ctx.GetStub().GetState(akcessid)
 	txID := ctx.GetStub().GetTxID()
 
@@ -175,7 +172,7 @@ func (u *UserContract) DeleteVerification(ctx contractapi.TransactionContextInte
 
 	var index int
 	for i, j := range user.Verifications[profileField] {
-		if j.VerifierObj.AkcessID == akcessid {
+		if j.VerifierObj.AkcessID == verifierAKcessid {
 			index = i
 			break
 		}
