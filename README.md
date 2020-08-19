@@ -8,7 +8,7 @@ AKcess document verification
 #### Create User
 peer chaincode invoke -n akcess -C myc -c '{"Args":["CreateUser","AK1"]}'
 
-#### Create User
+#### Create Verifier
 peer chaincode invoke -n akcess -C myc -c '{"Args":["CreateVerifier","V1","verifier1","A"]}'
 
 #### Add user profile verification
