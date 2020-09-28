@@ -65,7 +65,7 @@ func (u *UserContract) CreateVerifier(ctx contractapi.TransactionContextInterfac
 }
 
 // AddUserProfileVerification add verifcation transaction and field of users profiles is verfiied
-func (u *UserContract) AddUserProfileVerification(ctx contractapi.TransactionContextInterface, verifierAKcessID string, userAKcessID string, profileField string, expiryDate string) (string, error) {
+func (u *UserContract) AddUserProfileVerification(ctx contractapi.TransactionContextInterface, verifierAKcessID string, userAKcessID string, profileFields []string, expiryDates []string) (string, error) {
 	// verifierAKcessID, _ := ctx.GetClientIdentity().GetID()
 	txID := ctx.GetStub().GetTxID()
 	verifierAsBytes, err := ctx.GetStub().GetState(verifierAKcessID)
@@ -76,18 +76,8 @@ func (u *UserContract) AddUserProfileVerification(ctx contractapi.TransactionCon
 		return txID, fmt.Errorf("AKcessID %s doesn't exist", verifierAKcessID)
 	}
 
-	expirydate, err := time.Parse(time.RFC3339, expiryDate)
-	if err != nil {
-		panic(err)
-	}
-
 	var verifier Verifier
 	json.Unmarshal(verifierAsBytes, &verifier)
-
-	verification := Verification{
-		VerifierObj: verifier,
-		ExpirtyDate: expirydate,
-	}
 
 	userAsBytes, err := ctx.GetStub().GetState(userAKcessID)
 	if err != nil {
@@ -101,23 +91,33 @@ func (u *UserContract) AddUserProfileVerification(ctx contractapi.TransactionCon
 	var user User
 	json.Unmarshal(userAsBytes, &user)
 
-	verifierList := VerifiersList(user.Verifications[profileField])
-
-	_, found := Find(verifierList, verifierAKcessID)
-	if found {
-		for i, v := range user.Verifications[profileField] {
-			if v.VerifierObj.AkcessID == verifierAKcessID {
-				user.Verifications[profileField][i].ExpirtyDate = expirydate
-				break
-			}
+	for index, profileField := range profileFields {
+		verifierList := VerifiersList(user.Verifications[profileField])
+		expirydate, err := time.Parse(time.RFC3339, expiryDates[index])
+		if err != nil {
+			panic(err)
 		}
-	} else {
-		user.Verifications[profileField] = append(user.Verifications[profileField], verification)
+
+		_, found := Find(verifierList, verifierAKcessID)
+		if found {
+			for i, v := range user.Verifications[profileField] {
+				if v.VerifierObj.AkcessID == verifierAKcessID {
+					user.Verifications[profileField][i].ExpirtyDate = expirydate
+					break
+				}
+			}
+		} else {
+			verification := Verification{
+				VerifierObj: verifier,
+				ExpirtyDate: expirydate,
+			}
+			user.Verifications[profileField] = append(user.Verifications[profileField], verification)
+		}
 	}
 
 	userAsBytes, _ = json.Marshal(user)
 
-	fmt.Printf("%s: Profile field %s of user %s verified by %s\n", txID, profileField, userAKcessID, verifierAKcessID)
+	fmt.Printf("%s: Profile field %s of user %s verified by %s\n", txID, profileFields, userAKcessID, verifierAKcessID)
 	return txID, ctx.GetStub().PutState(userAKcessID, userAsBytes)
 }
 
