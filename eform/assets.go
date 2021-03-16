@@ -28,11 +28,11 @@ type Signature struct {
 
 // EformShare eform object for share eform
 type EformShare struct {
-	ObjectType string `json:"docType"`
-	SharingID  string `jaon:"sharingid"`
-	Sender     string `json:"sender"`
-	Verifier   string `json:"verifier"`
-	EformID    string `json:"eformId"`
+	ObjectType string   `json:"docType"`
+	SharingID  string   `jaon:"sharingid"`
+	Sender     string   `json:"sender"`
+	Receivers  []string `json:"receivers"`
+	EformID    string   `json:"eformId"`
 }
 
 // Verifier schema

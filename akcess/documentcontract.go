@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
@@ -79,10 +80,10 @@ func (d *DocContract) SignDoc(ctx contractapi.TransactionContextInterface, akces
 }
 
 // SendDoc shares document from sender to verifier
-func (d *DocContract) SendDoc(ctx contractapi.TransactionContextInterface, sender string, sharingid string, verifier string, documentid string) (string, error) {
+func (d *DocContract) SendDoc(ctx contractapi.TransactionContextInterface, sender string, sharingid string, receivers []string, documentid string) (string, error) {
 	// sender, _ := ctx.GetClientIdentity().GetID()
 	senderAsBytes, err := ctx.GetStub().GetState(sender)
-	verifierAsBytes, err := ctx.GetStub().GetState(verifier)
+	// verifierAsBytes, err := ctx.GetStub().GetState(verifier)
 	docAsBytes, err := ctx.GetStub().GetState(documentid)
 	txid := ctx.GetStub().GetTxID()
 
@@ -93,9 +94,9 @@ func (d *DocContract) SendDoc(ctx contractapi.TransactionContextInterface, sende
 	if senderAsBytes == nil {
 		return txid, fmt.Errorf("AKcessId %s doesn't exist", sender)
 	}
-	if verifierAsBytes == nil {
-		return txid, fmt.Errorf("AKcessId %s doesn't exist", verifier)
-	}
+	// if verifierAsBytes == nil {
+	// 	return txid, fmt.Errorf("AKcessId %s doesn't exist", verifier)
+	// }
 	if docAsBytes == nil {
 		return txid, fmt.Errorf("Document with documentid %s doesn't exist", documentid)
 	}
@@ -104,13 +105,13 @@ func (d *DocContract) SendDoc(ctx contractapi.TransactionContextInterface, sende
 		ObjectType: "docshare",
 		SharingID:  sharingid,
 		Sender:     sender,
-		Verifier:   verifier,
+		Receivers:  receivers,
 		DocumentID: documentid,
 	}
 
 	shareSDocAdBytes, _ := json.Marshal(sharedoc)
 
-	fmt.Printf("%s: Document %s shared from %s to %s\n", txid, documentid, sender, verifier)
+	fmt.Printf("%s: Document %s shared from %s to %s\n", txid, documentid, sender, strings.Join(receivers, " "))
 	return txid, ctx.GetStub().PutState(sharingid, shareSDocAdBytes)
 }
 

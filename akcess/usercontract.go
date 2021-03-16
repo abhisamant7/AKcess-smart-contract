@@ -176,3 +176,19 @@ func (u *UserContract) DeleteVerification(ctx contractapi.TransactionContextInte
 
 	return txID, ctx.GetStub().PutState(akcessid, newUserAsBytes)
 }
+
+// DeleteUser deletes the user from Blockchain world state
+func (u *UserContract) DeleteUser(ctx contractapi.TransactionContextInterface, akcessid string) (string, error) {
+	userAsBytes, err := ctx.GetStub().GetState(akcessid)
+	txID := ctx.GetStub().GetTxID()
+
+	if err != nil {
+		return txID, fmt.Errorf("Failed to read from world state. %s", err.Error())
+	}
+	if userAsBytes == nil {
+		return txID, fmt.Errorf("AKcessID %s doesn't exist", akcessid)
+	}
+
+	fmt.Printf("%s: User with AKcessID %s deleted\n", txID, akcessid)
+	return txID, ctx.GetStub().DelState(akcessid)
+}

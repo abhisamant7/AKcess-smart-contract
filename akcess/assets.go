@@ -49,11 +49,11 @@ type Signature struct {
 
 // DocumentShare document object for share doc
 type DocumentShare struct {
-	ObjectType string `json:"docType"`
-	SharingID  string `json:"sharingid"`
-	Sender     string `json:"sender"`
-	Verifier   string `json:"verifier"`
-	DocumentID string `json:"documentid"`
+	ObjectType string   `json:"docType"`
+	SharingID  string   `json:"sharingid"`
+	Sender     string   `json:"sender"`
+	Receivers  []string `json:"receivers"`
+	DocumentID string   `json:"documentid"`
 }
 
 // Find check if item already exists in slice

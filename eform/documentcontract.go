@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
@@ -76,7 +77,7 @@ func (d *EformContract) SignEform(ctx contractapi.TransactionContextInterface, a
 }
 
 // SendEform shares eform from sender to verifier
-func (d *EformContract) SendEform(ctx contractapi.TransactionContextInterface, sender string, sharingid string, verifier string, eformid string) (string, error) {
+func (d *EformContract) SendEform(ctx contractapi.TransactionContextInterface, sender string, sharingid string, receivers []string, eformid string) (string, error) {
 	// sender, _ := ctx.GetClientIdentity().GetID()
 	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	txid := ctx.GetStub().GetTxID()
@@ -92,13 +93,13 @@ func (d *EformContract) SendEform(ctx contractapi.TransactionContextInterface, s
 		ObjectType: "eformshare",
 		SharingID:  sharingid,
 		Sender:     sender,
-		Verifier:   verifier,
+		Receivers:  receivers,
 		EformID:    eformid,
 	}
 
 	shareEformAsBytes, _ := json.Marshal(shareeform)
 
-	fmt.Printf("%s: Eform %s shared from %s to %s\n", txid, eformid, sender, verifier)
+	fmt.Printf("%s: Eform %s shared from %s to %s\n", txid, eformid, sender, strings.Join(receivers, " "))
 	return txid, ctx.GetStub().PutState(sharingid, shareEformAsBytes)
 }
 
