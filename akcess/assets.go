@@ -56,6 +56,17 @@ type DocumentShare struct {
 	DocumentID string   `json:"documentid"`
 }
 
+// DigitalAsset AKcess digital asset
+type DigitalAsset struct {
+	UniqueAssetID string            `json:"uniqueAssetID"`
+	AssetType     string            `json:"assetType"`
+	Owner         string            `json:"owner"`
+	Metadata      map[string]string `json:"metadata"`
+	LinkedDocs    []string          `json:"linkedDocs"`
+	Verifications []Verification    `json:"verifications"`
+	Description   string            `json:"description"`
+}
+
 // Find check if item already exists in slice
 func Find(slice []string, val string) (int, bool) {
 	for i, item := range slice {

@@ -1,10 +1,8 @@
-module github.com/chaincodes/akcess
+module akcess
 
-go 1.13
+go 1.14
 
 require (
-	github.com/google/uuid v1.1.1 // indirect
-	github.com/hyperledger/fabric-chaincode-go v0.0.0-20200128192331-2d899240a7ed
-	github.com/hyperledger/fabric-contract-api-go v1.0.0
-	github.com/rs/xid v1.2.1 // indirect
+	github.com/hyperledger/fabric-chaincode-go v0.0.0-20201119163726-f8ef75b17719
+	github.com/hyperledger/fabric-contract-api-go v1.1.1
 )

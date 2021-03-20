@@ -16,7 +16,11 @@ func main() {
 	doccontract.UnknownTransaction = UnknownTransactionHandler
 	doccontract.Name = "doccontract"
 
-	cc, err := contractapi.NewChaincode(usercontract, doccontract)
+	assetContract := new(DigitalAssetContract)
+	assetContract.UnknownTransaction = UnknownTransactionHandler
+	assetContract.Name = "adat"
+
+	cc, err := contractapi.NewChaincode(usercontract, doccontract, assetContract)
 	cc.DefaultContract = usercontract.GetName()
 
 	if err != nil {
