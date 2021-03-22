@@ -65,6 +65,7 @@ type DigitalAsset struct {
 	LinkedDocs    []string          `json:"linkedDocs"`
 	Verifications []Verification    `json:"verifications"`
 	Description   string            `json:"description"`
+	AssetDocHash  string            `json:"assetDocHash"`
 }
 
 // Find check if item already exists in slice

@@ -17,7 +17,7 @@ type DigitalAssetContract struct {
 }
 
 // RegisterAsset register new digital asset
-func (da *DigitalAssetContract) RegisterAsset(ctx contractapi.TransactionContextInterface, assetType string, metadata map[string]string, description string) Response {
+func (da *DigitalAssetContract) RegisterAsset(ctx contractapi.TransactionContextInterface, assetType string, metadata map[string]string, description string, assetDocHash string) Response {
 	response := Response{
 		TxID:    ctx.GetStub().GetTxID(),
 		Success: false,
@@ -38,6 +38,7 @@ func (da *DigitalAssetContract) RegisterAsset(ctx contractapi.TransactionContext
 		Owner:         *invoker,
 		Metadata:      metadata,
 		Description:   description,
+		AssetDocHash:  assetDocHash,
 	}
 
 	assetAsBytes, err := json.Marshal(asset)
@@ -198,7 +199,7 @@ func (da *DigitalAssetContract) LinkDocument(ctx contractapi.TransactionContextI
 }
 
 // VerifyAssetOwnership verifiers can verify the ownership of asset holders
-func (da *DigitalAssetContract) VerifyAssetOwnership(ctx contractapi.TransactionContextInterface, assetID string, expiryDate string) Response {
+func (da *DigitalAssetContract) VerifyAssetOwnership(ctx contractapi.TransactionContextInterface, assetID string, expiryDate string, assetDocHash string) Response {
 	response := Response{
 		TxID:    ctx.GetStub().GetTxID(),
 		Success: false,
@@ -248,6 +249,13 @@ func (da *DigitalAssetContract) VerifyAssetOwnership(ctx contractapi.Transaction
 	err = json.Unmarshal(assetAsBytes, &asset)
 	if err != nil {
 		response.Message = fmt.Sprintf("Error while unmarshling asset: %s", err.Error())
+		logger.Error(response.Message)
+		return response
+	}
+
+	// Verifying hash of asset doc
+	if asset.AssetDocHash != assetDocHash {
+		response.Message = fmt.Sprint("Document malformed. Asset hash you sent is not metching with asset in Blockchain.", err.Error())
 		logger.Error(response.Message)
 		return response
 	}
