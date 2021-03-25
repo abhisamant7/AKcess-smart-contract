@@ -423,3 +423,41 @@ func (da *DigitalAssetContract) GetDigitalAsset(ctx contractapi.TransactionConte
 	response.Data = asset
 	return response
 }
+
+// GetAssetByOwner returns all assests of given owner
+func (da *DigitalAssetContract) GetAssetByOwner(ctx contractapi.TransactionContextInterface, owner string) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
+	}
+
+	var richQuery string = fmt.Sprintf(`{
+		"selector": {
+		   "owner": "%s"
+		}
+	}`, owner)
+	resultIterator, err := ctx.GetStub().GetQueryResult(richQuery)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while fetching query result: %s", err.Error())
+		logger.Error(response.Message)
+		return response
+	}
+	defer resultIterator.Close()
+
+	var result []DigitalAsset
+	for resultIterator.HasNext() {
+		queryResponse, _ := resultIterator.Next()
+
+		da := new(DigitalAsset)
+		_ = json.Unmarshal(queryResponse.Value, da)
+		result = append(result, *da)
+	}
+
+	response.Success = true
+	response.Message = fmt.Sprint("Successfully fetched assets")
+	logger.Info(response.Message)
+	response.Data = result
+	return response
+}

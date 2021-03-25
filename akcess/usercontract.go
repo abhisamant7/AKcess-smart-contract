@@ -192,3 +192,41 @@ func (u *UserContract) DeleteUser(ctx contractapi.TransactionContextInterface, a
 	fmt.Printf("%s: User with AKcessID %s deleted\n", txID, akcessid)
 	return txID, ctx.GetStub().DelState(akcessid)
 }
+
+// GetAllVerifiers returns all registered verifiers
+func (u *UserContract) GetAllVerifiers(ctx contractapi.TransactionContextInterface) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
+	}
+
+	var richQuery string = `{
+		"selector": {
+		   "docType": "verifier"
+		}
+	}`
+	resultIterator, err := ctx.GetStub().GetQueryResult(richQuery)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while fetching query result: %s", err.Error())
+		logger.Error(response.Message)
+		return response
+	}
+	defer resultIterator.Close()
+
+	var result []Verifier
+	for resultIterator.HasNext() {
+		queryResponse, _ := resultIterator.Next()
+
+		v := new(Verifier)
+		_ = json.Unmarshal(queryResponse.Value, v)
+		result = append(result, *v)
+	}
+
+	response.Success = true
+	response.Message = fmt.Sprint("Successfully fetched all verifiers")
+	logger.Info(response.Message)
+	response.Data = result
+	return response
+}
