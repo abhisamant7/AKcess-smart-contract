@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
@@ -16,16 +15,25 @@ type EformContract struct {
 }
 
 // CreateEform creates eform
-func (d *EformContract) CreateEform(ctx contractapi.TransactionContextInterface, akcessid string, eformid string, eformHash []string) (string, error) {
-	// akcessid, _ := ctx.GetClientIdentity().GetID()
-	eformAsBytes, err := ctx.GetStub().GetState(eformid)
-	txid := ctx.GetStub().GetTxID()
+func (d *EformContract) CreateEform(ctx contractapi.TransactionContextInterface, eformid string, eformHash []string) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
+	}
 
+	invoker, _ := getCommonName(ctx)
+	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	if err != nil {
-		return txid, fmt.Errorf("Failed to read from world state. %s", err.Error())
+		response.Message = fmt.Sprintf("Error while fetching doc from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
 	}
 	if eformAsBytes != nil {
-		return txid, fmt.Errorf("EformID with %s already exist", eformid)
+		response.Message = fmt.Sprintf("Eform with id %s already exist", eformid)
+		logger.Info(response.Message)
+		return response
 	}
 
 	eform := Eform{
@@ -33,60 +41,107 @@ func (d *EformContract) CreateEform(ctx contractapi.TransactionContextInterface,
 		EformID:       eformid,
 		EformHash:     eformHash,
 		Signature:     []Signature{},
-		AkcessID:      akcessid,
+		AkcessID:      invoker,
 		Verifications: []Verification{},
 	}
 
 	newEformAsBytes, _ := json.Marshal(eform)
-	fmt.Printf("%s: Eform with %s id created\n", txid, eformid)
-	return txid, ctx.GetStub().PutState(eformid, newEformAsBytes)
+	err = ctx.GetStub().PutState(eformid, newEformAsBytes)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while creating eform: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
+
+	response.Success = true
+	response.Message = fmt.Sprintf("Eform with id %s created", eformid)
+	logger.Info(response.Message)
+	return response
 }
 
 // SignEform signs the eform
-func (d *EformContract) SignEform(ctx contractapi.TransactionContextInterface, akcessid string, eformid string, signhash string, signDate string, otpCode string) (string, error) {
-	// akcessid, _ := ctx.GetClientIdentity().GetID()
-	eformAsBytes, err := ctx.GetStub().GetState(eformid)
-	txid := ctx.GetStub().GetTxID()
-	signdate, err := time.Parse(time.RFC3339, signDate)
-
-	if err != nil {
-		panic(err)
+func (d *EformContract) SignEform(ctx contractapi.TransactionContextInterface, eformid string, signhash string, signDate string, otpCode string) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
 	}
+
+	invoker, _ := getCommonName(ctx)
+	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	if err != nil {
-		return txid, fmt.Errorf("Failed to read from world state. %s", err.Error())
+		response.Message = fmt.Sprintf("Error while fetching eform from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
 	}
 	if eformAsBytes == nil {
-		return txid, fmt.Errorf("eform with eformid %s doesn't exist", eformid)
+		response.Message = fmt.Sprintf("Eform with id %s doesn't exist", eformid)
+		logger.Info(response.Message)
+		return response
+	}
+
+	signdate, err := time.Parse(time.RFC3339, signDate)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while parsing date pass date in ISO format: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
 	}
 
 	var eform Eform
 	json.Unmarshal(eformAsBytes, &eform)
-
 	signature := Signature{
 		SignatureHash: signhash,
 		OTP:           otpCode,
-		AkcessID:      akcessid,
+		AkcessID:      invoker,
 		TimeStamp:     signdate,
 	}
-
 	eform.Signature = append(eform.Signature, signature)
-
 	eformAsBytes, _ = json.Marshal(eform)
-	fmt.Printf("%s: Eform %s signed by %s\n", txid, eformid, akcessid)
-	return txid, ctx.GetStub().PutState(eformid, eformAsBytes)
+	err = ctx.GetStub().PutState(eformid, eformAsBytes)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while signing eform: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
+
+	response.Success = true
+	response.Message = fmt.Sprintf("Eform %s signed by %s", eformid, invoker)
+	logger.Info(response.Message)
+	return response
 }
 
 // SendEform shares eform from sender to verifier
-func (d *EformContract) SendEform(ctx contractapi.TransactionContextInterface, sender string, sharingid string, receivers []string, eformid string) (string, error) {
-	// sender, _ := ctx.GetClientIdentity().GetID()
-	eformAsBytes, err := ctx.GetStub().GetState(eformid)
-	txid := ctx.GetStub().GetTxID()
+func (d *EformContract) SendEform(ctx contractapi.TransactionContextInterface, sharingid string, receivers []string, eformid string) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
+	}
 
+	sender, _ := getCommonName(ctx)
+	eformAsBytes, err := ctx.GetStub().GetState(eformid)
 	if err != nil {
-		return txid, fmt.Errorf("Failed to read from world state. %s", err.Error())
+		response.Message = fmt.Sprintf("Error while fetching eform from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
 	}
 	if eformAsBytes == nil {
-		return txid, fmt.Errorf("Eform with eformid %s doesn't exist", eformid)
+		response.Message = fmt.Sprintf("Eform with id %s doesn't exist", eformid)
+		logger.Info(response.Message)
+		return response
+	}
+	userAsBytes, err := ctx.GetStub().GetState(sender)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while fetching user from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
+	if userAsBytes == nil {
+		response.Message = fmt.Sprintf("User with id %s doesn't exist", sender)
+		logger.Info(response.Message)
+		return response
 	}
 
 	shareeform := EformShare{
@@ -96,38 +151,56 @@ func (d *EformContract) SendEform(ctx contractapi.TransactionContextInterface, s
 		Receivers:  receivers,
 		EformID:    eformid,
 	}
-
 	shareEformAsBytes, _ := json.Marshal(shareeform)
+	err = ctx.GetStub().PutState(sharingid, shareEformAsBytes)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while sharing eform: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
 
-	fmt.Printf("%s: Eform %s shared from %s to %s\n", txid, eformid, sender, strings.Join(receivers, " "))
-	return txid, ctx.GetStub().PutState(sharingid, shareEformAsBytes)
+	response.Success = true
+	response.Message = fmt.Sprintf("Eform %s shared from %s to %s", eformid, sender, receivers)
+	logger.Info(response.Message)
+	return response
 }
 
 // VerifyEform verify the eform
-func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface, akcessid string, eformid string, expiryDate string) (string, error) {
-	// akcessid, _ := ctx.GetClientIdentity().GetID()
+func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface, eformid string, expiryDate string) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
+	}
+
+	invoker, _ := getCommonName(ctx)
 	eformAsBytes, err := ctx.GetStub().GetState(eformid)
-	txid := ctx.GetStub().GetTxID()
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while fetching eform from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
+	if eformAsBytes == nil {
+		response.Message = fmt.Sprintf("Eform with id %s doesn't exist", eformid)
+		logger.Info(response.Message)
+		return response
+	}
 
 	expirydate, err := time.Parse(time.RFC3339, expiryDate)
 	if err != nil {
-		panic(err)
+		response.Message = fmt.Sprintf("Error while parsing date pass date in ISO format: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
 	}
 
-	if err != nil {
-		return txid, fmt.Errorf("Failed to read from world state. %s", err.Error())
-	}
-	if eformAsBytes == nil {
-		return txid, fmt.Errorf("eform with eformid %s doesn't exist", eformid)
-	}
-
-	invokeArgs := util.ToChaincodeArgs("GetVerifier", akcessid)
+	invokeArgs := util.ToChaincodeArgs("GetVerifier", invoker)
 	verifierAsBytes := ctx.GetStub().InvokeChaincode("akcess", invokeArgs, "akcessglobal")
-
 	if verifierAsBytes.Payload == nil {
-		return txid, fmt.Errorf("Verifier %s is not yet registered on global channel", akcessid)
+		response.Message = fmt.Sprintf("Verifier %s not registered on global channel", invoker)
+		logger.Info(response.Message)
+		return response
 	}
-
 	var verifier Verifier
 	json.Unmarshal(verifierAsBytes.Payload, &verifier)
 
@@ -140,10 +213,10 @@ func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface,
 	}
 
 	verifierList := VerifiersList(eform.Verifications)
-	_, found := Find(verifierList, akcessid)
+	_, found := Find(verifierList, invoker)
 	if found {
 		for i, v := range eform.Verifications {
-			if v.VerifierObj.AkcessID == akcessid {
+			if v.VerifierObj.AkcessID == invoker {
 				eform.Verifications[i].ExpirtyDate = expirydate
 				break
 			}
@@ -153,9 +226,17 @@ func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface,
 	}
 
 	eformAsBytes, _ = json.Marshal(eform)
+	err = ctx.GetStub().PutState(eformid, eformAsBytes)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while verifying eform: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
 
-	fmt.Printf("%s: Eform %s of verified by %s\n", txid, eformid, akcessid)
-	return txid, ctx.GetStub().PutState(eformid, eformAsBytes)
+	response.Success = true
+	response.Message = fmt.Sprintf("Eform %s verified by %s", eformid, invoker)
+	logger.Info(response.Message)
+	return response
 }
 
 // GetTxForEform get eform details for perticular transaction
@@ -192,24 +273,45 @@ func (d *EformContract) VerifyEform(ctx contractapi.TransactionContextInterface,
 // }
 
 // GetVerifiersOfEform get verifiers of perticular eform
-func (d *EformContract) GetVerifiersOfEform(ctx contractapi.TransactionContextInterface, eformid string) ([]Verification, error) {
-	eformAsBytes, err := ctx.GetStub().GetState(eformid)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to read from world state. %s", err.Error())
+func (d *EformContract) GetVerifiersOfEform(ctx contractapi.TransactionContextInterface, eformid string) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
 	}
 
+	eformAsBytes, err := ctx.GetStub().GetState(eformid)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while fetching eform from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
 	if eformAsBytes == nil {
-		return nil, fmt.Errorf("eform with eformid %s doesn't exist", eformid)
+		response.Message = fmt.Sprintf("Eform with id %s doesn't exist", eformid)
+		logger.Info(response.Message)
+		return response
 	}
 
 	var eform Eform
 	json.Unmarshal(eformAsBytes, &eform)
 
-	return eform.Verifications, nil
+	response.Data = eform.Verifications
+	response.Success = true
+	response.Message = fmt.Sprintf("Successfully fetched verifications of eform %s", eformid)
+	logger.Info(response.Message)
+	return response
 }
 
 // GetSignature get signature by signature hash
-func (d *EformContract) GetSignature(ctx contractapi.TransactionContextInterface, signHash string) ([]Eform, error) {
+func (d *EformContract) GetSignature(ctx contractapi.TransactionContextInterface, signHash string) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
+	}
+
 	queryString := fmt.Sprintf(`{
 		"selector": {
 		   "docType": "eform",
@@ -221,12 +323,15 @@ func (d *EformContract) GetSignature(ctx contractapi.TransactionContextInterface
 		}
 	 }`, signHash)
 
-	fmt.Println(queryString)
-	resultIterator, _ := ctx.GetStub().GetQueryResult(queryString)
+	resultIterator, err := ctx.GetStub().GetQueryResult(queryString)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while searching eform by signature: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
 	defer resultIterator.Close()
 
 	result := []Eform{}
-
 	for resultIterator.HasNext() {
 		queryResponse, _ := resultIterator.Next()
 
@@ -235,5 +340,10 @@ func (d *EformContract) GetSignature(ctx contractapi.TransactionContextInterface
 		result = append(result, *eform)
 		fmt.Println(result)
 	}
-	return result, nil
+
+	response.Data = result
+	response.Success = true
+	response.Message = fmt.Sprintf("Successfully fetched all eform with signature %s", signHash)
+	logger.Info(response.Message)
+	return response
 }

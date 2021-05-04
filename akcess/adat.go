@@ -6,10 +6,7 @@ import (
 	"time"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
-	"github.com/hyperledger/fabric/common/flogging"
 )
-
-var logger = flogging.MustGetLogger("example")
 
 // DigitalAssetContract Smart contract for AKcess digital asset token
 type DigitalAssetContract struct {
@@ -35,7 +32,7 @@ func (da *DigitalAssetContract) RegisterAsset(ctx contractapi.TransactionContext
 	asset := DigitalAsset{
 		UniqueAssetID: response.TxID,
 		AssetType:     assetType,
-		Owner:         *invoker,
+		Owner:         invoker,
 		Metadata:      metadata,
 		Description:   description,
 		AssetDocHash:  assetDocHash,
@@ -98,8 +95,8 @@ func (da *DigitalAssetContract) TransferAsset(ctx contractapi.TransactionContext
 		return response
 	}
 
-	if asset.Owner != *invoker {
-		response.Message = fmt.Sprintf("Digtal asset with id %s not owned by %s", asset.UniqueAssetID, *invoker)
+	if asset.Owner != invoker {
+		response.Message = fmt.Sprintf("Digtal asset with id %s not owned by %s", asset.UniqueAssetID, invoker)
 		logger.Error(response.Message)
 		return response
 	}
@@ -162,8 +159,8 @@ func (da *DigitalAssetContract) LinkDocument(ctx contractapi.TransactionContextI
 		return response
 	}
 
-	if asset.Owner != *invoker {
-		response.Message = fmt.Sprintf("Digtal asset with id %s not owned by %s", asset.UniqueAssetID, *invoker)
+	if asset.Owner != invoker {
+		response.Message = fmt.Sprintf("Digtal asset with id %s not owned by %s", asset.UniqueAssetID, invoker)
 		logger.Error(response.Message)
 		return response
 	}
@@ -214,14 +211,14 @@ func (da *DigitalAssetContract) VerifyAssetOwnership(ctx contractapi.Transaction
 		return response
 	}
 
-	verifierAsBytes, err := ctx.GetStub().GetState(*invoker)
+	verifierAsBytes, err := ctx.GetStub().GetState(invoker)
 	if err != nil {
 		response.Message = fmt.Sprintf("Error while getting verifier from ledger: %s", err.Error())
 		logger.Error(response.Message)
 		return response
 	}
 	if verifierAsBytes == nil {
-		response.Message = fmt.Sprintf("Verifier with id %s doesn't exist", *invoker)
+		response.Message = fmt.Sprintf("Verifier with id %s doesn't exist", invoker)
 		logger.Info(response.Message)
 		return response
 	}
@@ -261,9 +258,9 @@ func (da *DigitalAssetContract) VerifyAssetOwnership(ctx contractapi.Transaction
 	}
 
 	verifierList := VerifiersList(asset.Verifications)
-	_, found := Find(verifierList, *invoker)
+	_, found := Find(verifierList, invoker)
 	if found {
-		response.Message = fmt.Sprintf("Digital asset %s already verified by %s", assetID, *invoker)
+		response.Message = fmt.Sprintf("Digital asset %s already verified by %s", assetID, invoker)
 		logger.Error(response.Message)
 		return response
 	} else {
@@ -295,7 +292,7 @@ func (da *DigitalAssetContract) VerifyAssetOwnership(ctx contractapi.Transaction
 	}
 
 	response.Success = true
-	response.Message = fmt.Sprintf("Digital asset %s verified by %s", assetID, *invoker)
+	response.Message = fmt.Sprintf("Digital asset %s verified by %s", assetID, invoker)
 	logger.Info(response.Message)
 	response.Data = asset
 	return response
@@ -317,14 +314,14 @@ func (da *DigitalAssetContract) RemoveVerification(ctx contractapi.TransactionCo
 		return response
 	}
 
-	verifierAsBytes, err := ctx.GetStub().GetState(*invoker)
+	verifierAsBytes, err := ctx.GetStub().GetState(invoker)
 	if err != nil {
 		response.Message = fmt.Sprintf("Error while getting verifier from ledger: %s", err.Error())
 		logger.Error(response.Message)
 		return response
 	}
 	if verifierAsBytes == nil {
-		response.Message = fmt.Sprintf("Verifier with id %s doesn't exist", *invoker)
+		response.Message = fmt.Sprintf("Verifier with id %s doesn't exist", invoker)
 		logger.Info(response.Message)
 		return response
 	}
@@ -357,9 +354,9 @@ func (da *DigitalAssetContract) RemoveVerification(ctx contractapi.TransactionCo
 	}
 
 	verifierList := VerifiersList(asset.Verifications)
-	index, found := Find(verifierList, *invoker)
+	index, found := Find(verifierList, invoker)
 	if !found {
-		response.Message = fmt.Sprintf("Verifier %s didn't make any verification on asset %s", *invoker, *invoker)
+		response.Message = fmt.Sprintf("Verifier %s didn't make any verification on asset %s", invoker, invoker)
 		logger.Error(response.Message)
 		return response
 	} else {
@@ -381,7 +378,7 @@ func (da *DigitalAssetContract) RemoveVerification(ctx contractapi.TransactionCo
 	}
 
 	response.Success = true
-	response.Message = fmt.Sprintf("Verification of verifier %s removed from asset %s", *invoker, assetID)
+	response.Message = fmt.Sprintf("Verification of verifier %s removed from asset %s", invoker, assetID)
 	logger.Info(response.Message)
 	response.Data = asset
 	return response

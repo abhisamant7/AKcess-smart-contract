@@ -21,10 +21,10 @@ func UnknownTransactionHandler(ctx contractapi.TransactionContextInterface) erro
 	return fmt.Errorf("Invalid function %s passed with args %v", fcn, args)
 }
 
-func getCommonName(ctx contractapi.TransactionContextInterface) (*string, error) {
+func getCommonName(ctx contractapi.TransactionContextInterface) (string, error) {
 	x509, err := ctx.GetClientIdentity().GetX509Certificate()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return &x509.Subject.CommonName, nil
+	return x509.Subject.CommonName, nil
 }

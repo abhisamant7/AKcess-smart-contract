@@ -14,80 +14,123 @@ type UserContract struct {
 }
 
 // CreateUser adds a new user to the world state with given details
-func (u *UserContract) CreateUser(ctx contractapi.TransactionContextInterface, akcessid string) (string, error) {
-	// akcessid, _ := ctx.GetClientIdentity().GetID()
-	userAsBytes, err := ctx.GetStub().GetState(akcessid)
-	txID := ctx.GetStub().GetTxID()
+func (u *UserContract) CreateUser(ctx contractapi.TransactionContextInterface) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
+	}
 
+	invoker, _ := getCommonName(ctx)
+	userAsBytes, err := ctx.GetStub().GetState(invoker)
 	if err != nil {
-		return txID, fmt.Errorf("Failed to read from world state. %s", err.Error())
+		response.Message = fmt.Sprintf("Error while fetching user from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
 	}
 	if userAsBytes != nil {
-		return txID, fmt.Errorf("AKcessID %s already exist", akcessid)
+		response.Message = fmt.Sprintf("AKcessID %s already exist", invoker)
+		logger.Info(response.Message)
+		return response
 	}
 
 	user := User{
 		ObjectType:    "user",
-		AkcessID:      akcessid,
+		AkcessID:      invoker,
 		Verifications: map[string][]Verification{},
 	}
-
 	newUserAsBytes, _ := json.Marshal(user)
+	err = ctx.GetStub().PutState(invoker, newUserAsBytes)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while registering user: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
 
-	fmt.Printf("%s: User with AKcessID %s added\n", txID, akcessid)
-	return txID, ctx.GetStub().PutState(akcessid, newUserAsBytes)
+	response.Success = true
+	response.Message = fmt.Sprintf("User with AKcessID %s added\n", invoker)
+	logger.Info(response.Message)
+	return response
 }
 
 // CreateVerifier register new verifier in Blockchain
-func (u *UserContract) CreateVerifier(ctx contractapi.TransactionContextInterface, akcessid string, verifierName string, VerifierGrade string) (string, error) {
-	// akcessid, _ := ctx.GetClientIdentity().GetID()
-	verifierAsBytes, err := ctx.GetStub().GetState(akcessid)
-	txID := ctx.GetStub().GetTxID()
+func (u *UserContract) CreateVerifier(ctx contractapi.TransactionContextInterface, verifierName string, VerifierGrade string) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
+	}
 
+	invoker, _ := getCommonName(ctx)
+	verifierAsBytes, err := ctx.GetStub().GetState(invoker)
 	if err != nil {
-		return txID, fmt.Errorf("Failed to read from world state. %s", err.Error())
+		response.Message = fmt.Sprintf("Error while fetching verifier from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
 	}
 	if verifierAsBytes != nil {
-		return txID, fmt.Errorf("AKcessID %s already exist", akcessid)
+		response.Message = fmt.Sprintf("AKcessID %s already exist", invoker)
+		logger.Info(response.Message)
+		return response
 	}
 
 	verifier := Verifier{
 		ObjectType:    "verifier",
-		AkcessID:      akcessid,
+		AkcessID:      invoker,
 		VerifierName:  verifierName,
 		VerifierGrade: VerifierGrade,
 	}
-
 	newVerifierAsBytes, _ := json.Marshal(verifier)
+	err = ctx.GetStub().PutState(invoker, newVerifierAsBytes)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while registering verifier: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
 
-	fmt.Printf("%s: Verifier with AKcessID %s added\n", txID, akcessid)
-	return txID, ctx.GetStub().PutState(akcessid, newVerifierAsBytes)
+	response.Success = true
+	response.Message = fmt.Sprintf("Verifier with AKcessID %s added\n", invoker)
+	logger.Info(response.Message)
+	return response
 }
 
 // AddUserProfileVerification add verifcation transaction and field of users profiles is verfiied
-func (u *UserContract) AddUserProfileVerification(ctx contractapi.TransactionContextInterface, verifierAKcessID string, userAKcessID string, profileFields []string, expiryDates []string) (string, error) {
-	// verifierAKcessID, _ := ctx.GetClientIdentity().GetID()
-	txID := ctx.GetStub().GetTxID()
-	verifierAsBytes, err := ctx.GetStub().GetState(verifierAKcessID)
-	if err != nil {
-		return txID, fmt.Errorf("Failed to read from world state. %s", err.Error())
-	}
-	if verifierAsBytes == nil {
-		return txID, fmt.Errorf("AKcessID %s doesn't exist", verifierAKcessID)
+func (u *UserContract) AddUserProfileVerification(ctx contractapi.TransactionContextInterface, verifierAKcessID string, userAKcessID string, profileFields []string, expiryDates []string) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
 	}
 
+	invoker, _ := getCommonName(ctx)
+	verifierAsBytes, err := ctx.GetStub().GetState(invoker)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while fetching verifier from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
+	if verifierAsBytes == nil {
+		response.Message = fmt.Sprintf("Verifier with id %s doesn't exist", invoker)
+		logger.Info(response.Message)
+		return response
+	}
 	var verifier Verifier
 	json.Unmarshal(verifierAsBytes, &verifier)
 
 	userAsBytes, err := ctx.GetStub().GetState(userAKcessID)
 	if err != nil {
-		return txID, fmt.Errorf("Failed to read from world state. %s", err.Error())
+		response.Message = fmt.Sprintf("Error while fetching user from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
 	}
-
 	if userAsBytes == nil {
-		return txID, fmt.Errorf("AKcessID %s doesn't exist", userAKcessID)
+		response.Message = fmt.Sprintf("User with id %s doesn't exist", invoker)
+		logger.Info(response.Message)
+		return response
 	}
-
 	var user User
 	json.Unmarshal(userAsBytes, &user)
 
@@ -95,7 +138,9 @@ func (u *UserContract) AddUserProfileVerification(ctx contractapi.TransactionCon
 		verifierList := VerifiersList(user.Verifications[profileField])
 		expirydate, err := time.Parse(time.RFC3339, expiryDates[index])
 		if err != nil {
-			panic(err)
+			response.Message = fmt.Sprintf("Error while parsing date pass date in ISO format: %s", err.Error())
+			logger.Info(response.Message)
+			return response
 		}
 
 		_, found := Find(verifierList, verifierAKcessID)
@@ -116,26 +161,48 @@ func (u *UserContract) AddUserProfileVerification(ctx contractapi.TransactionCon
 	}
 
 	userAsBytes, _ = json.Marshal(user)
+	err = ctx.GetStub().PutState(userAKcessID, userAsBytes)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while updating user profile verification: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
 
-	fmt.Printf("%s: Profile field %s of user %s verified by %s\n", txID, profileFields, userAKcessID, verifierAKcessID)
-	return txID, ctx.GetStub().PutState(userAKcessID, userAsBytes)
+	response.Success = true
+	response.Message = fmt.Sprintf("Profile field %s of user %s verified by %s", profileFields, userAKcessID, verifierAKcessID)
+	logger.Info(response.Message)
+	return response
 }
 
 // GetVerifiersOfUserProfile get verifiers of perticular user field
-func (u *UserContract) GetVerifiersOfUserProfile(ctx contractapi.TransactionContextInterface, akcessid string, profileField string) ([]Verification, error) {
-	userAsBytes, err := ctx.GetStub().GetState(akcessid)
+func (u *UserContract) GetVerifiersOfUserProfile(ctx contractapi.TransactionContextInterface, akcessid string, profileField string) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
+	}
 
+	userAsBytes, err := ctx.GetStub().GetState(akcessid)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read from world state. %s", err.Error())
+		response.Message = fmt.Sprintf("Error while fetching user from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
 	}
 	if userAsBytes == nil {
-		return nil, fmt.Errorf("AKcessID %s doesn't exist", akcessid)
+		response.Message = fmt.Sprintf("AKcessID %s doesn't exist", akcessid)
+		logger.Info(response.Message)
+		return response
 	}
 
 	var user User
 	json.Unmarshal(userAsBytes, &user)
 
-	return user.Verifications[profileField], nil
+	response.Data = user.Verifications
+	response.Success = true
+	response.Message = fmt.Sprintf("Succesfully fetched verfiers list of user profile field %s", profileField)
+	logger.Info(response.Message)
+	return response
 }
 
 // GetVerifier get verifier
@@ -156,41 +223,76 @@ func (u *UserContract) GetVerifier(ctx contractapi.TransactionContextInterface, 
 }
 
 // DeleteVerification deletes the verification from user profile
-func (u *UserContract) DeleteVerification(ctx contractapi.TransactionContextInterface, akcessid string, profileField string) (string, error) {
-	userAsBytes, err := ctx.GetStub().GetState(akcessid)
-	txID := ctx.GetStub().GetTxID()
+func (u *UserContract) DeleteVerification(ctx contractapi.TransactionContextInterface, profileField string) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
+	}
 
+	invoker, _ := getCommonName(ctx)
+	userAsBytes, err := ctx.GetStub().GetState(invoker)
 	if err != nil {
-		return txID, fmt.Errorf("Failed to read from world state. %s", err.Error())
+		response.Message = fmt.Sprintf("Error while fetching user from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
 	}
 	if userAsBytes == nil {
-		return txID, fmt.Errorf("AKcessID %s doesn't exist", akcessid)
+		response.Message = fmt.Sprintf("AKcessID %s doesn't exist", invoker)
+		logger.Info(response.Message)
+		return response
 	}
 
 	var user User
 	json.Unmarshal(userAsBytes, &user)
-
 	user.Verifications[profileField] = []Verification{}
-
 	newUserAsBytes, _ := json.Marshal(user)
+	err = ctx.GetStub().PutState(invoker, newUserAsBytes)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while deleting profile field verification: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
 
-	return txID, ctx.GetStub().PutState(akcessid, newUserAsBytes)
+	response.Success = true
+	response.Message = fmt.Sprintf("Deleted verification of %s's %s profile field", invoker, profileField)
+	logger.Info(response.Message)
+	return response
 }
 
 // DeleteUser deletes the user from Blockchain world state
-func (u *UserContract) DeleteUser(ctx contractapi.TransactionContextInterface, akcessid string) (string, error) {
-	userAsBytes, err := ctx.GetStub().GetState(akcessid)
-	txID := ctx.GetStub().GetTxID()
+func (u *UserContract) DeleteUser(ctx contractapi.TransactionContextInterface, key string) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
+	}
 
+	userAsBytes, err := ctx.GetStub().GetState(key)
 	if err != nil {
-		return txID, fmt.Errorf("Failed to read from world state. %s", err.Error())
+		response.Message = fmt.Sprintf("Error while fetching data from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
 	}
 	if userAsBytes == nil {
-		return txID, fmt.Errorf("AKcessID %s doesn't exist", akcessid)
+		response.Message = fmt.Sprintf("Key %s doesn't exist", key)
+		logger.Info(response.Message)
+		return response
 	}
 
-	fmt.Printf("%s: User with AKcessID %s deleted\n", txID, akcessid)
-	return txID, ctx.GetStub().DelState(akcessid)
+	err = ctx.GetStub().DelState(key)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while deleting data: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
+
+	response.Success = true
+	response.Message = fmt.Sprintf("Key %s deleted", key)
+	logger.Info(response.Message)
+	return response
 }
 
 // GetAllVerifiers returns all registered verifiers

@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
@@ -15,16 +14,25 @@ type DocContract struct {
 }
 
 // CreateDoc creates doc
-func (d *DocContract) CreateDoc(ctx contractapi.TransactionContextInterface, akcessid string, documentid string, documenthash []string) (string, error) {
-	// akcessid, _ := ctx.GetClientIdentity().GetID()
-	docAsBytes, err := ctx.GetStub().GetState(documentid)
-	txid := ctx.GetStub().GetTxID()
+func (d *DocContract) CreateDoc(ctx contractapi.TransactionContextInterface, documentid string, documenthash []string) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
+	}
 
+	invoker, _ := getCommonName(ctx)
+	docAsBytes, err := ctx.GetStub().GetState(documentid)
 	if err != nil {
-		return txid, fmt.Errorf("Failed to read from world state. %s", err.Error())
+		response.Message = fmt.Sprintf("Error while fetching doc from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
 	}
 	if docAsBytes != nil {
-		return txid, fmt.Errorf("DocumentID with %s already exist", documentid)
+		response.Message = fmt.Sprintf("Document with id %s already exist", documentid)
+		logger.Info(response.Message)
+		return response
 	}
 
 	doc := Document{
@@ -32,73 +40,120 @@ func (d *DocContract) CreateDoc(ctx contractapi.TransactionContextInterface, akc
 		DocumentID:    documentid,
 		DocumentHash:  documenthash,
 		Signature:     []Signature{},
-		AkcessID:      akcessid,
+		AkcessID:      invoker,
 		Verifications: []Verification{},
 	}
 
 	newDocAsBytes, _ := json.Marshal(doc)
-	fmt.Printf("%s: Document with %s id created\n", txid, documentid)
-	return txid, ctx.GetStub().PutState(documentid, newDocAsBytes)
+	err = ctx.GetStub().PutState(documentid, newDocAsBytes)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while creating doc: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
+
+	response.Success = true
+	response.Message = fmt.Sprintf("Document with id %s created", documentid)
+	logger.Info(response.Message)
+	return response
 }
 
 // SignDoc signs doc with signature Hash
-func (d *DocContract) SignDoc(ctx contractapi.TransactionContextInterface, akcessid string, documentid string, signhash string, signDate string, otpCode string) (string, error) {
-	// akcessid, _ := ctx.GetClientIdentity().GetID()
+func (d *DocContract) SignDoc(ctx contractapi.TransactionContextInterface, documentid string, signhash string, signDate string, otpCode string) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
+	}
+
+	invoker, _ := getCommonName(ctx)
 	docAsBytes, err := ctx.GetStub().GetState(documentid)
-	userAsBytes, err := ctx.GetStub().GetState(akcessid)
-	txid := ctx.GetStub().GetTxID()
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while fetching doc from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
+	if docAsBytes == nil {
+		response.Message = fmt.Sprintf("Document with id %s doesn't exist", documentid)
+		logger.Info(response.Message)
+		return response
+	}
+
+	userAsBytes, err := ctx.GetStub().GetState(invoker)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while fetching user from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
+	if userAsBytes == nil {
+		response.Message = fmt.Sprintf("User with id %s doesn't exist", invoker)
+		logger.Info(response.Message)
+		return response
+	}
 
 	signdate, err := time.Parse(time.RFC3339, signDate)
 	if err != nil {
-		panic(err)
-	}
-
-	if err != nil {
-		return txid, fmt.Errorf("Failed to read from world state. %s", err.Error())
-	}
-	if docAsBytes == nil {
-		return txid, fmt.Errorf("document with documentid %s doesn't exist", documentid)
-	}
-	if userAsBytes == nil {
-		return txid, fmt.Errorf("AKcessId %s doesn't exist", akcessid)
+		response.Message = fmt.Sprint("Error while parsing date pass date in ISO format")
+		logger.Info(response.Message)
+		return response
 	}
 
 	var doc Document
 	json.Unmarshal(docAsBytes, &doc)
-
 	signature := Signature{
 		SignatureHash: signhash,
 		OTP:           otpCode,
-		AkcessID:      akcessid,
+		AkcessID:      invoker,
 		TimeStamp:     signdate,
 	}
-
 	doc.Signature = append(doc.Signature, signature)
 	docAsBytes, _ = json.Marshal(doc)
-	fmt.Printf("%s: Document %s signed by %s\n", txid, documentid, akcessid)
-	return txid, ctx.GetStub().PutState(documentid, docAsBytes)
+
+	err = ctx.GetStub().PutState(documentid, docAsBytes)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while updating signature in doc: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
+
+	response.Success = true
+	response.Message = fmt.Sprintf("Document %s signed by %s", documentid, invoker)
+	logger.Info(response.Message)
+	return response
 }
 
 // SendDoc shares document from sender to verifier
-func (d *DocContract) SendDoc(ctx contractapi.TransactionContextInterface, sender string, sharingid string, receivers []string, documentid string) (string, error) {
-	// sender, _ := ctx.GetClientIdentity().GetID()
+func (d *DocContract) SendDoc(ctx contractapi.TransactionContextInterface, sharingid string, receivers []string, documentid string) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
+	}
+
+	sender, _ := getCommonName(ctx)
 	senderAsBytes, err := ctx.GetStub().GetState(sender)
-	// verifierAsBytes, err := ctx.GetStub().GetState(verifier)
-	docAsBytes, err := ctx.GetStub().GetState(documentid)
-	txid := ctx.GetStub().GetTxID()
-
 	if err != nil {
-		return txid, fmt.Errorf("Failed to read from world state. %s", err.Error())
+		response.Message = fmt.Sprintf("Error while fetching user from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
 	}
-
 	if senderAsBytes == nil {
-		return txid, fmt.Errorf("AKcessId %s doesn't exist", sender)
+		response.Message = fmt.Sprintf("User with id %s doesn't exist", documentid)
+		logger.Info(response.Message)
+		return response
 	}
-	// if verifierAsBytes == nil {
-	// 	return txid, fmt.Errorf("AKcessId %s doesn't exist", verifier)
-	// }
+	docAsBytes, err := ctx.GetStub().GetState(documentid)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while fetching doc from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
 	if docAsBytes == nil {
-		return txid, fmt.Errorf("Document with documentid %s doesn't exist", documentid)
+		response.Message = fmt.Sprintf("Document with id %s doesn't exist", documentid)
+		logger.Info(response.Message)
+		return response
 	}
 
 	sharedoc := DocumentShare{
@@ -108,38 +163,59 @@ func (d *DocContract) SendDoc(ctx contractapi.TransactionContextInterface, sende
 		Receivers:  receivers,
 		DocumentID: documentid,
 	}
-
 	shareSDocAdBytes, _ := json.Marshal(sharedoc)
+	err = ctx.GetStub().PutState(sharingid, shareSDocAdBytes)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while sending doc: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
 
-	fmt.Printf("%s: Document %s shared from %s to %s\n", txid, documentid, sender, strings.Join(receivers, " "))
-	return txid, ctx.GetStub().PutState(sharingid, shareSDocAdBytes)
+	response.Success = true
+	response.Message = fmt.Sprintf("Document %s shared from %s to %s", documentid, sender, receivers)
+	logger.Info(response.Message)
+	return response
 }
 
 // VerifyDoc verify the doc
-func (d *DocContract) VerifyDoc(ctx contractapi.TransactionContextInterface, akcessid string, documentid string, expiryDate string) (string, error) {
-	// akcessid, _ := ctx.GetClientIdentity().GetID()
+func (d *DocContract) VerifyDoc(ctx contractapi.TransactionContextInterface, documentid string, expiryDate string) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
+	}
+
+	invoker, _ := getCommonName(ctx)
 	docAsBytes, err := ctx.GetStub().GetState(documentid)
-	txid := ctx.GetStub().GetTxID()
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while fetching doc from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
+	if docAsBytes != nil {
+		response.Message = fmt.Sprintf("Document with id %s already exist", documentid)
+		logger.Info(response.Message)
+		return response
+	}
 
 	expirydate, err := time.Parse(time.RFC3339, expiryDate)
 	if err != nil {
-		panic(err)
+		response.Message = fmt.Sprintf("Error while parsing error pass date in ISO format", err.Error())
+		logger.Error(response.Message)
+		return response
 	}
 
+	verifierAsBytes, err := ctx.GetStub().GetState(invoker)
 	if err != nil {
-		return txid, fmt.Errorf("Failed to read from world state. %s", err.Error())
-	}
-
-	if docAsBytes == nil {
-		return txid, fmt.Errorf("document with documentid %s doesn't exist", documentid)
-	}
-
-	verifierAsBytes, err := ctx.GetStub().GetState(akcessid)
-	if err != nil {
-		return txid, fmt.Errorf("Failed to read from world state. %s", err.Error())
+		response.Message = fmt.Sprintf("Error while fetching verifier from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
 	}
 	if verifierAsBytes == nil {
-		return txid, fmt.Errorf("AKcessID %s doesn't exist", akcessid)
+		response.Message = fmt.Sprintf("Verifier with id %s doesn't exist", invoker)
+		logger.Info(response.Message)
+		return response
 	}
 
 	var verifier Verifier
@@ -154,10 +230,10 @@ func (d *DocContract) VerifyDoc(ctx contractapi.TransactionContextInterface, akc
 	}
 
 	verifierList := VerifiersList(doc.Verifications)
-	_, found := Find(verifierList, akcessid)
+	_, found := Find(verifierList, invoker)
 	if found {
 		for i, v := range doc.Verifications {
-			if v.VerifierObj.AkcessID == akcessid {
+			if v.VerifierObj.AkcessID == invoker {
 				doc.Verifications[i].ExpirtyDate = expirydate
 				break
 			}
@@ -167,9 +243,17 @@ func (d *DocContract) VerifyDoc(ctx contractapi.TransactionContextInterface, akc
 	}
 
 	docAsBytes, _ = json.Marshal(doc)
+	err = ctx.GetStub().PutState(documentid, docAsBytes)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while updating verification in doc: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
 
-	fmt.Printf("%s: Document %s of verified by %s\n", txid, documentid, akcessid)
-	return txid, ctx.GetStub().PutState(documentid, docAsBytes)
+	response.Success = true
+	response.Message = fmt.Sprintf("Document %s verified by %s", documentid, invoker)
+	logger.Info(response.Message)
+	return response
 }
 
 // GetTxForDoc get document details for perticular transaction
@@ -206,24 +290,45 @@ func (d *DocContract) VerifyDoc(ctx contractapi.TransactionContextInterface, akc
 // }
 
 // GetVerifiersOfDoc get verifiers of perticular doc
-func (d *DocContract) GetVerifiersOfDoc(ctx contractapi.TransactionContextInterface, documentid string) ([]Verification, error) {
-	docAsBytes, err := ctx.GetStub().GetState(documentid)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to read from world state. %s", err.Error())
+func (d *DocContract) GetVerifiersOfDoc(ctx contractapi.TransactionContextInterface, documentid string) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
 	}
 
+	docAsBytes, err := ctx.GetStub().GetState(documentid)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while fetching doc from world state: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
 	if docAsBytes == nil {
-		return nil, fmt.Errorf("document with documentid %s doesn't exist", documentid)
+		response.Message = fmt.Sprintf("Document with id %s doesn't exist", documentid)
+		logger.Info(response.Message)
+		return response
 	}
 
 	var doc Document
 	json.Unmarshal(docAsBytes, &doc)
 
-	return doc.Verifications, nil
+	response.Data = doc.Verifications
+	response.Success = true
+	response.Message = fmt.Sprintf("Successfully fetched verifications of doc %s", documentid)
+	logger.Info(response.Message)
+	return response
 }
 
 // GetSignature get signature by signature hash
-func (d *DocContract) GetSignature(ctx contractapi.TransactionContextInterface, signHash string) ([]Document, error) {
+func (d *DocContract) GetSignature(ctx contractapi.TransactionContextInterface, signHash string) Response {
+	response := Response{
+		TxID:    ctx.GetStub().GetTxID(),
+		Success: false,
+		Message: "",
+		Data:    nil,
+	}
+
 	queryString := fmt.Sprintf(`{
 		"selector": {
 		   "docType": "document",
@@ -235,11 +340,15 @@ func (d *DocContract) GetSignature(ctx contractapi.TransactionContextInterface, 
 		}
 	 }`, signHash)
 
-	resultIterator, _ := ctx.GetStub().GetQueryResult(queryString)
+	resultIterator, err := ctx.GetStub().GetQueryResult(queryString)
+	if err != nil {
+		response.Message = fmt.Sprintf("Error while fetching signature: %s" + err.Error())
+		logger.Error(response.Message)
+		return response
+	}
 	defer resultIterator.Close()
 
 	result := []Document{}
-
 	for resultIterator.HasNext() {
 		queryResponse, _ := resultIterator.Next()
 
@@ -247,5 +356,10 @@ func (d *DocContract) GetSignature(ctx contractapi.TransactionContextInterface, 
 		_ = json.Unmarshal(queryResponse.Value, doc)
 		result = append(result, *doc)
 	}
-	return result, nil
+
+	response.Data = result
+	response.Success = true
+	response.Message = fmt.Sprintf("Successfully fetched all docs with signature %s", signHash)
+	logger.Info(response.Message)
+	return response
 }
