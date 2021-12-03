@@ -11,31 +11,31 @@ import (
 // User describes basic details of user
 type User struct {
 	ObjectType    string                    `json:"docType"`
-	AkcessID      string                    `json:"akcessid"`
+	AkcessID      string                    `json:"akcessId"`
 	Verifications map[string][]Verification `json:"verifications"`
 }
 
 // Verifier schema
 type Verifier struct {
 	ObjectType    string `json:"docType"`
-	AkcessID      string `json:"akcessid"` // AKcessID of a verifier
+	AkcessID      string `json:"akcessId"` // AKcessID of a verifier
 	VerifierName  string `json:"verifierName"`
-	VerifierGrade string `json:"verifierGrade"`
+	VerifierGrade string `json:"grade"`
 }
 
 // Verification schema
 type Verification struct {
-	VerifierObj Verifier  `json:"veriier"`
+	VerifierObj Verifier  `json:"verifier"`
 	ExpirtyDate time.Time `json:"expiryDate"` // when verification will expire
 }
 
 // Document structure
 type Document struct {
 	ObjectType    string         `json:"docType"`
-	DocumentID    string         `json:"documentid"`
-	DocumentHash  []string       `json:"documenthash"`
+	DocumentID    string         `json:"documentID"`
+	DocumentHash  []string       `json:"documentHash"`
 	Signature     []Signature    `json:"signature"`
-	AkcessID      string         `json:"akcessid"` // AKcessID of user who owns the document
+	AkcessID      string         `json:"akcessId"` // AKcessID of user who owns the document
 	Verifications []Verification `json:"verifications"`
 }
 
@@ -53,7 +53,7 @@ type DocumentShare struct {
 	SharingID  string   `json:"sharingid"`
 	Sender     string   `json:"sender"`
 	Receivers  []string `json:"receivers"`
-	DocumentID string   `json:"documentid"`
+	DocumentID string   `json:"documentID"`
 }
 
 // DigitalAsset AKcess digital asset

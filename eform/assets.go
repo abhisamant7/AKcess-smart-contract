@@ -14,7 +14,7 @@ type Eform struct {
 	EformID       string         `json:"eformId"`
 	EformHash     []string       `json:"eformHash"`
 	Signature     []Signature    `json:"signature"`
-	AkcessID      string         `json:"akcessid"`
+	AkcessID      string         `json:"akcessId"`
 	Verifications []Verification `json:"verifications"`
 }
 
@@ -38,14 +38,14 @@ type EformShare struct {
 // Verifier schema
 type Verifier struct {
 	ObjectType    string `json:"docType"`
-	AkcessID      string `json:"akcessid"`
+	AkcessID      string `json:"akcessId"`
 	VerifierName  string `json:"verifierName"`
-	VerifierGrade string `json:"verifierGrade"`
+	VerifierGrade string `json:"grade"`
 }
 
 // Verification schema
 type Verification struct {
-	VerifierObj Verifier  `json:"veriier"`
+	VerifierObj Verifier  `json:"verifier"`
 	ExpirtyDate time.Time `json:"expiryDate"`
 }
 
